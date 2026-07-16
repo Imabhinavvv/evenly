@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Receipt } from 'lucide-react';
 import { useLocalStorage } from './utils/useLocalStorage';
 import { calculateSettlement, calculateTotalSpent } from './utils/settlement';
@@ -13,17 +13,9 @@ import ExpenseForm from './components/ExpenseForm';
 import BalanceDashboard from './components/BalanceDashboard';
 import ExpenseLog from './components/ExpenseLog';
 import TotalSpent from './components/TotalSpent';
-import Loader from './components/ui/Loader';
+import Footer from './components/Footer';
 
 export default function App() {
-  const [isSiteLoading, setIsSiteLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSiteLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
   const [roommates, setRoommates] = useLocalStorage('es_roommates', []);
   const [expenses, setExpenses] = useLocalStorage('es_expenses', []);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
@@ -106,27 +98,19 @@ export default function App() {
     });
   };
 
-  if (isSiteLoading) {
-    return (
-      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
-        <Loader />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text font-sans selection:bg-brand-primary/20 selection:text-brand-text pb-16 transition-colors duration-200">
-      
+
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-brand-border shadow-sm">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center shadow-sm">
-              <Receipt size={20} className="text-white" strokeWidth={2.5} />
+            <div className="w-9 h-9 rounded-xl bg-evenly-coral flex items-center justify-center shadow-sm">
+              <Receipt size={25} className="text-white" strokeWidth={2.0} />
             </div>
-            <span className="font-extrabold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-brand-primary to-indigo-500" style={{ fontFamily: "'Outfit', sans-serif" }}>Evenly</span>
+            <span className="text-3xl font-extrabold bg-clip-text bg-gradient-to-r from-evenly-coral to-evenly-coral-deep">Evenly</span>
           </div>
-          
+
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider">Total Spent</span>
             <span className="font-bold text-brand-text text-lg leading-none mt-0.5">
@@ -138,38 +122,39 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-        
-        <RoommateManager 
-          roommates={roommates} 
-          setRoommates={setRoommates} 
+
+        <RoommateManager
+          roommates={roommates}
+          setRoommates={setRoommates}
         />
-        
-        <ExpenseForm 
-          roommates={roommates} 
-          onAddExpense={handleAddExpense} 
+
+        <ExpenseForm
+          roommates={roommates}
+          onAddExpense={handleAddExpense}
         />
-        
-        <BalanceDashboard 
-          expenses={expenses} 
-          transactions={transactions} 
+
+        <BalanceDashboard
+          expenses={expenses}
+          transactions={transactions}
           onSettleUp={handleSettleUp}
           onExportPDF={handleExportPDF}
           onExportCSV={handleExportCSV}
         />
-        
-        <ExpenseLog 
-          expenses={expenses} 
-          onDeleteExpense={handleDeleteExpense} 
+
+        <ExpenseLog
+          expenses={expenses}
+          onDeleteExpense={handleDeleteExpense}
           onEditExpense={setEditingExpenseId}
         />
-        
-        <TotalSpent 
-          expenses={expenses} 
-          totalSpent={totalSpent} 
+
+        <TotalSpent
+          expenses={expenses}
+          totalSpent={totalSpent}
         />
 
       </main>
 
+      <Footer />
       {/* Edit Expense Modal */}
       {editingExpenseId && (
         <div className="fixed inset-0 z-[100] bg-brand-text/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -201,10 +186,10 @@ export default function App() {
       />
 
       {/* Toast Notification */}
-      <Toast 
-        message={toast?.message} 
-        type={toast?.type} 
-        onClose={() => setToast(null)} 
+      <Toast
+        message={toast?.message}
+        type={toast?.type}
+        onClose={() => setToast(null)}
       />
     </div>
   );

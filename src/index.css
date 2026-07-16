@@ -1,78 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Reenie+Beanie&display=swap');
+@import "./css/evenly.css";
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --color-brand-primary: #3B82F6;
-  --color-brand-primary-hover: #2563EB;
-  --color-brand-bg: #F8F9FB;
-  --color-brand-bg-secondary: #FFFFFF;
-  --color-brand-card: #FFFFFF;
-  --color-brand-text: #1F2937;
-  --color-brand-text-secondary: #6B7280;
-  --color-brand-border: #E5E7EB;
-  --color-brand-border-hover: #D1D5DB;
-  --color-brand-success: #10B981;
-  --color-brand-warning: #F59E0B;
-  --color-brand-danger: #EF4444;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-accent: 'Reenie Beanie', cursive;
+
+  --color-evenly-bg: #FDFCF8;
+  --color-evenly-surface: #FFFFFF;
+  --color-evenly-sage: #E8EFE8;
+  --color-evenly-lavender: #EFEDF4;
+  --color-evenly-coral: #FFB7B2;
+  --color-evenly-coral-hover: #FFA59E;
+  --color-evenly-success: #4CAF50;
+  --color-evenly-warning: #F4B400;
+  --color-evenly-danger: #E53935;
+  --color-evenly-text: #292524;
+  --color-evenly-text-secondary: #78716C;
+  --color-evenly-border: #ECE7E1;
 }
 
 @layer base {
   body {
-    background-color: var(--color-brand-bg);
-    color: var(--color-brand-text);
-    font-family: var(--font-sans);
+    background-color: var(--evenly-bg);
+    color: var(--evenly-text);
+    font-family: var(--evenly-font);
+    font-size: 1rem;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
   }
-}
-
-@layer utilities {
-  .uiverse-card {
-    background-color: var(--color-brand-card);
-    border-radius: 16px;
-    border: 1px solid var(--color-brand-border);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    transition: all 200ms ease-out;
-  }
-
-  .uiverse-icon-container {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  @keyframes modalFadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .modal-animate-in {
-    animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  .uiverse-card:hover {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-    border-color: var(--color-brand-border-hover);
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.3);
-    border-radius: 20px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(156, 163, 175, 0.5);
-  }
-
 }
