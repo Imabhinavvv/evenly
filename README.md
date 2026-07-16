@@ -1,16 +1,134 @@
-# React + Vite
+# Evenly 💰
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+**Evenly** is a modern, intuitive expense tracking application that helps users manage their finances with ease. Track expenses, monitor spending habits, analyze reports, and export detailed PDF summaries—all through a clean and responsive interface.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Features
 
-## React Compiler
+* 📊 Dashboard with expense overview
+* ➕ Add, edit, and manage expenses
+* 🗂️ Categorize expenses
+* 📅 Filter expenses by date
+* 📈 Expense analytics and insights
+* 💸 Budget tracking
+* 📄 Export beautifully designed PDF reports
+* ✅ Settle expenses with confirmation dialogs
+* 🔍 Search and filter expense history
+* 📱 Fully responsive design
+* 🌙 Modern and user-friendly UI
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Frontend
+
+* React
+* TypeScript
+* Tailwind CSS
+* Lucide Icons
+
+### Backend
+
+* Base44
+
+### PDF Generation
+
+* PDF Export Utility
+
+---
+
+
+## 📸 Features Overview
+
+### Dashboard
+
+* Expense summary
+* Recent transactions
+* Analytics cards
+
+### Expense Management
+
+* Add new expenses
+* Edit existing expenses
+* Delete expenses
+* Settle expenses
+
+### Reports
+
+* Download professional PDF reports
+* Color-coded summaries
+* Category breakdown
+* Financial overview
+
+---
+
+## 🎨 Design Highlights
+
+* Modern UI
+* Smooth animations
+* Responsive layouts
+* Accessible components
+* Consistent spacing and typography
+* Professional color palette
+
+---
+
+## 🔒 Validation
+
+* Required field validation
+* Positive amount validation
+* Maximum expense limit of **₹1,00,00,000 (1 Crore)**
+* User-friendly error messages
+
+---
+
+## 📱 Responsive Support
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+---
+
+## 📄 PDF Reports
+
+Generate professional expense reports featuring:
+
+* Expense summary
+* Category-wise spending
+* Financial statistics
+* Color-coded sections
+* Well-formatted tables
+* High-quality typography
+* Download confirmation dialog
+
+---
+
+## 📌 Roadmap
+
+* AI-powered spending insights
+* Recurring expenses
+* Income management
+* Savings goals
+* Multi-currency support
+* Cloud synchronization
+* Dark mode improvements
+* Receipt scanning with OCR
+* Expense sharing
+* Budget notifications
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 👨‍💻 Author
+
+**Abhinav Mamidi**
+
