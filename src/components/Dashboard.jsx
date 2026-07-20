@@ -9,7 +9,7 @@ export default function Dashboard({ expenses, roommates, onExportPDF }) {
   const simplifiedDebts = useMemo(() => calculateSimplifiedDebts(expenses, roommates), [expenses, roommates]);
   const totalSpent = useMemo(() => calculateTotalSpent(expenses, roommates), [expenses, roommates]);
 
-  const grandTotalSpent = totalSpent.reduce((sum, t) => sum + t.amount, 0);
+  const grandTotalSpent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
   return (
     <div className="space-y-6">

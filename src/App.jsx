@@ -25,7 +25,7 @@ export default function App() {
 
   const transactions = useMemo(() => calculateSettlement(expenses, roommates), [expenses, roommates]);
   const totalSpent = useMemo(() => calculateTotalSpent(expenses, roommates), [expenses, roommates]);
-  const grandTotalSpent = totalSpent.reduce((sum, t) => sum + t.amount, 0);
+  const grandTotalSpent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
   const handleAddExpense = (expense) => {
     setExpenses([expense, ...expenses]);

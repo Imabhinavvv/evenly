@@ -4,7 +4,7 @@ import { formatCurrency } from '../utils/currency';
 export default function TotalSpent({ expenses, totalSpent }) {
   if (expenses.length === 0) return null;
 
-  const grandTotal = totalSpent.reduce((sum, t) => sum + t.amount, 0);
+  const grandTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="uiverse-card p-6 sm:p-8">

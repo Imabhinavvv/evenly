@@ -26,7 +26,7 @@ export function generatePDF(expenses, roommates, transactions, totalSpent) {
     formatCurrencyForPDF(t.amount)
   ]);
 
-  const grandTotal = totalSpent.reduce((sum, t) => sum + t.amount, 0);
+  const grandTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
   totalSpentBody.push(['Grand Total', formatCurrencyForPDF(grandTotal)]);
 
   autoTable(doc, {
