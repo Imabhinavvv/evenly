@@ -99,18 +99,20 @@
 }
 
 /* Cards */
-.evenly-card {
+.evenly-card,
+.uiverse-card {
   background: var(--evenly-surface);
   border: 1px solid var(--evenly-border);
   border-radius: var(--evenly-radius-lg);
   box-shadow: var(--evenly-shadow-sm);
   padding: clamp(1.5rem, 3vw, 2rem);
   transition:
-    transform 800ms var(--evenly-ease),
+    transform 300ms var(--evenly-ease),
     box-shadow 200ms var(--evenly-ease);
 }
 
-.evenly-card:hover {
+.evenly-card:hover,
+.uiverse-card:hover {
   box-shadow: var(--evenly-shadow-md);
 }
 

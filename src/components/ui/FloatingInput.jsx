@@ -2,7 +2,8 @@ import * as React from 'react';
 import { cn } from '../../utils/cn';
 
 const FloatingInput = React.forwardRef(({ className, label, id, ...props }, ref) => {
-  const inputId = id || React.useId();
+  const generatedId = React.useId();
+  const inputId = id || generatedId;
 
   return (
     <div className={cn('evenly-field', className)}>

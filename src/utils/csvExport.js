@@ -1,8 +1,8 @@
 import { formatCurrency, formatCurrencyDecimal } from './currency';
 
-export function generateCSV(expenses, transactions) {
+export function generateCSV(expenses, transactions, sessionName = null) {
   // Expense Log Section
-  let csvContent = "Expense Log\n";
+  let csvContent = sessionName ? `Evenly Expense Log - ${sessionName}\n\n` : "Expense Log\n";
   csvContent += "ID,Date,Description,Total Amount (Rs),Paid By,Split Between,Share Per Person (Rs)\n";
 
   expenses.forEach((e, idx) => {
@@ -40,7 +40,10 @@ export function generateCSV(expenses, transactions) {
   const link = document.createElement("a");
   link.setAttribute("href", url);
   const filenameDate = new Date().toISOString().split('T')[0];
-  link.setAttribute("download", `evenly-summary-${filenameDate}.csv`);
+  const safeFilename = sessionName
+    ? `evenly-${sessionName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'session'}.csv`
+    : `evenly-summary-${filenameDate}.csv`;
+  link.setAttribute("download", safeFilename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

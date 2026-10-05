@@ -2,12 +2,13 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from './currency';
 
-export function generatePDF(expenses, roommates, transactions, totalSpent) {
+export function generatePDF(expenses, roommates, transactions, totalSpent, sessionName = null) {
   const doc = new jsPDF();
 
   // Title
-  doc.setFontSize(22);
-  doc.text('Evenly Settlement Report', 14, 22);
+  doc.setFontSize(20);
+  const mainTitle = sessionName ? `Evenly Report — ${sessionName}` : 'Evenly Settlement Report';
+  doc.text(mainTitle, 14, 22);
 
   doc.setFontSize(11);
   doc.setTextColor(100);
@@ -110,5 +111,8 @@ export function generatePDF(expenses, roommates, transactions, totalSpent) {
   }
 
   // Save PDF
-  doc.save('evenly-settlement.pdf');
+  const safeFilename = sessionName
+    ? `evenly-${sessionName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'session'}.pdf`
+    : 'evenly-settlement.pdf';
+  doc.save(safeFilename);
 }
