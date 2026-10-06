@@ -48,18 +48,23 @@ export async function generateCSV(expenses, transactions, sessionName = null) {
     // Convert CSV string to base64
     const base64Data = btoa(unescape(encodeURIComponent(csvContent)));
 
+    // Save to public Documents folder so the file is easy to find
     const result = await Filesystem.writeFile({
-      path: safeFilename,
+      path: `Evenly/${safeFilename}`,
       data: base64Data,
-      directory: Directory.Cache,
+      directory: Directory.Documents,
+      recursive: true,           // create the Evenly/ sub-folder if needed
     });
+
+    // Show native alert with save location before opening share sheet
+    window.alert(`✅ CSV saved!\n\nLocation: Documents/Evenly/${safeFilename}\n\nYou can also share or open it with the options below.`);
 
     await Share.share({
       title: safeFilename,
       url: result.uri,
-      dialogTitle: 'Save / Share CSV',
+      dialogTitle: 'Open / Share CSV',
     });
-    return;
+    return result.uri;
   }
 
   // Web fallback: blob + anchor click

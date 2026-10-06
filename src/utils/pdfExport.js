@@ -123,17 +123,23 @@ export async function generatePDF(expenses, roommates, transactions, totalSpent,
     // Get base64 PDF data (strip the data URI prefix)
     const pdfBase64 = doc.output('datauristring').split(',')[1];
 
+    // Save to public Documents folder so the file is easy to find
     const result = await Filesystem.writeFile({
-      path: safeFilename,
+      path: `Evenly/${safeFilename}`,
       data: pdfBase64,
-      directory: Directory.Cache,
+      directory: Directory.Documents,
+      recursive: true,           // create the Evenly/ sub-folder if needed
     });
+
+    // Show native alert with save location before opening share sheet
+    window.alert(`✅ PDF saved!\n\nLocation: Documents/Evenly/${safeFilename}\n\nYou can also share or open it with the options below.`);
 
     await Share.share({
       title: safeFilename,
       url: result.uri,
-      dialogTitle: 'Save / Share PDF',
+      dialogTitle: 'Open / Share PDF',
     });
+    return result.uri;
   } else {
     doc.save(safeFilename);
   }
