@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrencyForPDF } from './currency';
 
-export function generatePDF(expenses, roommates, transactions, totalSpent, sessionName = null) {
+export async function generatePDF(expenses, roommates, transactions, totalSpent, sessionName = null) {
   const doc = new jsPDF();
 
   // Title
@@ -110,9 +110,31 @@ export function generatePDF(expenses, roommates, transactions, totalSpent, sessi
     doc.text('No expenses logged.', 14, currentY + 5);
   }
 
-  // Save PDF
+  // Save PDF — platform-aware
   const safeFilename = sessionName
     ? `evenly-${sessionName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'session'}.pdf`
     : 'evenly-settlement.pdf';
-  doc.save(safeFilename);
+
+  const { Capacitor } = await import('@capacitor/core');
+  if (Capacitor.isNativePlatform()) {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { Share } = await import('@capacitor/share');
+
+    // Get base64 PDF data (strip the data URI prefix)
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+    const result = await Filesystem.writeFile({
+      path: safeFilename,
+      data: pdfBase64,
+      directory: Directory.Cache,
+    });
+
+    await Share.share({
+      title: safeFilename,
+      url: result.uri,
+      dialogTitle: 'Save / Share PDF',
+    });
+  } else {
+    doc.save(safeFilename);
+  }
 }
