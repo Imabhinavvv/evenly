@@ -30,7 +30,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       });
       return next;
     });
-  }, [roommates]);
+  }, [roommates, initialData]);
 
   const parsedTotal = parseFloat(total) || 0;
   const isAmountExceeded = parsedTotal > 10000000;
@@ -124,15 +124,30 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
 
   if (roommates.length === 0) {
     return (
-      <div className="uiverse-card p-8 text-center text-brand-text-secondary border-dashed border-2 border-brand-border bg-brand-bg/50 shadow-none">
-        Add roommates above to start logging expenses.
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
+          <p className="text-xs text-brand-text-secondary mt-1">
+            Record a shared bill and split the cost amongst group members
+          </p>
+        </div>
+        <div className="p-8 text-center text-xs sm:text-sm text-brand-text-secondary border-dashed border border-brand-border rounded-2xl bg-brand-bg/40">
+          Create a group and add members above to start logging expenses.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={initialData ? "" : "uiverse-card p-6 sm:p-8"}>
-      {!initialData && <h2 className="text-xl font-bold text-brand-text mb-6">2. Add an Expense</h2>}
+    <div className={initialData ? "" : "space-y-6"}>
+      {!initialData && (
+        <div>
+          <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
+          <p className="text-xs text-brand-text-secondary mt-1">
+            Record a shared bill and split the cost amongst group members
+          </p>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

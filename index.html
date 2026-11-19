@@ -3,9 +3,31 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#FFB7B2" />
+  <meta name="description" content="Evenly is a modern, intuitive expense tracking and bill splitting application." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>evenly</title>
+  <title>Evenly — Expense Splitter</title>
+  <script>
+    (function() {
+      try {
+        const mode = localStorage.getItem('es_theme') || 'system';
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = mode === 'dark' || (mode === 'system' && prefersDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#141316');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#FFB7B2');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z49FH3NCJW"></script>

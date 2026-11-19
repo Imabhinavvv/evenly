@@ -13,7 +13,7 @@ export default function Contact() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <a href="mailto:hello@evenly.app" className="flex items-center gap-4 p-4 rounded-xl border border-brand-border bg-white hover:border-evenly-coral hover:shadow-sm transition-all group">
+        <a href="mailto:hello@evenly.app" className="flex items-center gap-4 p-4 rounded-xl border border-brand-border bg-evenly-surface hover:border-evenly-coral hover:shadow-sm transition-all group">
           <div className="w-10 h-10 rounded-full bg-evenly-lavender flex items-center justify-center group-hover:bg-evenly-coral/20 transition-colors">
             <Mail size={20} className="text-brand-text-secondary group-hover:text-evenly-coral-deep" />
           </div>
@@ -23,7 +23,7 @@ export default function Contact() {
           </div>
         </a>
 
-        <a href="https://evenly.abhinavvv.space" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl border border-brand-border bg-white hover:border-evenly-coral hover:shadow-sm transition-all group">
+        <a href="https://evenly.abhinavvv.space" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-xl border border-brand-border bg-evenly-surface hover:border-evenly-coral hover:shadow-sm transition-all group">
           <div className="w-10 h-10 rounded-full bg-evenly-sage flex items-center justify-center group-hover:bg-evenly-coral/20 transition-colors">
             <Globe size={20} className="text-brand-text-secondary group-hover:text-evenly-coral-deep" />
           </div>

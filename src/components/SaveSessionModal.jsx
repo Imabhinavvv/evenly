@@ -12,11 +12,12 @@ export default function SaveSessionModal({
   isSettling = false,
   expenses = [],
   roommates = [],
+  groupName = null,
 }) {
   const [sessionName, setSessionName] = useState('');
   const inputRef = useRef(null);
 
-  const defaultName = getDefaultSessionName(expenses, isSettling);
+  const defaultName = getDefaultSessionName(expenses, isSettling, groupName);
   const grandTotal = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function SaveSessionModal({
       />
 
       {/* Modal Dialog */}
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 sm:p-8 relative z-10 modal-animate-in border border-brand-border">
+      <div className="bg-evenly-surface rounded-2xl shadow-xl w-full max-w-lg p-6 sm:p-8 relative z-10 modal-animate-in border border-brand-border">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -112,7 +113,7 @@ export default function SaveSessionModal({
                 {roommates.map((r) => (
                   <span
                     key={r}
-                    className="px-2 py-0.5 rounded-md bg-white border border-brand-border text-brand-text font-medium text-[11px]"
+                    className="px-2 py-0.5 rounded-md bg-evenly-surface border border-brand-border text-brand-text font-medium text-[11px]"
                   >
                     {r}
                   </span>

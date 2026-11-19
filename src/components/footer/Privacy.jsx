@@ -22,15 +22,14 @@ export default function Privacy() {
         <h3 className="text-lg font-bold mb-2">Data Collection</h3>
         <p className="evenly-body text-brand-text-secondary">
           We do not collect personal identification information, financial details, or contact lists. 
-          The PDF and CSV exports are generated entirely on the client-side within your browser.
+          The PDF and CSV exports are generated entirely on-device within the application.
         </p>
       </div>
 
       <div>
         <h3 className="text-lg font-bold mb-2">Third-Party Services</h3>
         <p className="evenly-body text-brand-text-secondary">
-          We may use basic analytics (like plausible or Vercel analytics) to understand broad usage patterns (e.g., page views), 
-          but these services do not have access to your LocalStorage data.
+          Evenly operates as a standalone offline application. We do not transmit or share your on-device expense records with any third-party services.
         </p>
       </div>
     </div>

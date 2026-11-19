@@ -27,7 +27,7 @@ export function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, conf
       />
       
       {/* Modal */}
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 relative z-10 modal-animate-in">
+      <div className="bg-evenly-surface rounded-2xl shadow-xl w-full max-w-md p-6 sm:p-8 relative z-10 modal-animate-in border border-brand-border">
         <div className="flex items-start gap-4 mb-6">
           <div className="w-12 h-12 rounded-full bg-brand-warning/10 flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-6 h-6 text-brand-warning" />

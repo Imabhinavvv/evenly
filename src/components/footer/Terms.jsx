@@ -12,11 +12,11 @@ export default function Terms() {
       </div>
       
       <div>
-        <h3 className="text-lg font-bold mb-2">1. Local Storage & Data</h3>
+        <h3 className="text-lg font-bold mb-2">1. On-Device Storage & Data</h3>
         <p className="evenly-body text-brand-text-secondary">
-          Evenly currently operates as a local-first application. All your data (expenses, roommates, balances) 
-          is stored directly in your browser's LocalStorage. If you clear your browser data or use a different device, 
-          your information will not be synchronized or recoverable unless exported manually.
+          Evenly operates as an offline, on-device application. All your data (expenses, groups, balances, and history) 
+          is stored securely on your device. If you uninstall the app or clear its application data, 
+          your information will not be recoverable unless you have exported a .evenly backup file.
         </p>
       </div>
 

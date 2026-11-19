@@ -1,72 +1,233 @@
-import React, { useMemo, useState } from 'react';
-import { Receipt, Clock } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Receipt, Clock, Settings, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { useLocalStorage } from './utils/useLocalStorage';
 import { calculateSettlement, calculateTotalSpent } from './utils/settlement';
 import { generatePDF } from './utils/pdfExport';
 import { generateCSV } from './utils/csvExport';
-import { formatCurrency } from './utils/currency';
 import { createSessionSnapshot } from './utils/sessionHelper';
+import { createBackup, extractBackupFromFile, initBackupExtractor } from './utils/backup';
 import { ConfirmModal } from './components/ui/ConfirmModal';
 import { Toast } from './components/ui/Toast';
 
-import RoommateManager from './components/RoommateManager';
+import DashboardTab from './components/DashboardTab';
+import SettingsSheet from './components/SettingsSheet';
+import GroupManager from './components/GroupManager';
 import ExpenseForm from './components/ExpenseForm';
 import BalanceDashboard from './components/BalanceDashboard';
 import ExpenseLog from './components/ExpenseLog';
 import TotalSpent from './components/TotalSpent';
 import Footer from './components/Footer';
 import SaveSessionModal from './components/SaveSessionModal';
-import HistoryModal from './components/HistoryModal';
+import HistoryPage from './components/HistoryPage';
+import RestoreModal from './components/RestoreModal';
+import About from './components/footer/About';
+import Terms from './components/footer/Terms';
+import Privacy from './components/footer/Privacy';
+import Contact from './components/footer/Contact';
+import { useTheme } from './hooks/useTheme';
+import { migrateToGroups } from './utils/groupHelper';
 
 export default function App() {
-  const [roommates, setRoommates] = useLocalStorage('es_roommates', []);
-  const [expenses, setExpenses] = useLocalStorage('es_expenses', []);
-  const [history, setHistory] = useLocalStorage('es_history', []);
+  useTheme();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Groups and Storage Setup with Migration
+  const [groups, setGroups] = useLocalStorage('es_groups', () => {
+    let existingRoommates = [];
+    let existingExpenses = [];
+    let existingHistory = [];
+    let existingGroups = [];
+    try {
+      existingRoommates = JSON.parse(localStorage.getItem('es_roommates') || '[]');
+      existingExpenses = JSON.parse(localStorage.getItem('es_expenses') || '[]');
+      existingHistory = JSON.parse(localStorage.getItem('es_history') || '[]');
+      existingGroups = JSON.parse(localStorage.getItem('es_groups') || '[]');
+    } catch {
+      // ignore JSON parse error
+    }
+    return migrateToGroups(existingGroups, existingRoommates, existingExpenses, existingHistory);
+  });
+
+  const [activeGroupId, setActiveGroupId] = useLocalStorage('es_active_group_id', null);
+
+  // Resolve safe array of groups (No dummy data or default groups)
+  const validGroups = useMemo(() => {
+    if (!Array.isArray(groups)) return [];
+    // Automatically filter out any legacy dummy Roommates group with 0 expenses
+    return groups.filter(
+      (g) =>
+        !(
+          g.id === 'grp_default' &&
+          g.name === 'Roommates' &&
+          (!g.expenses || g.expenses.length === 0)
+        )
+    );
+  }, [groups]);
+
+  // Persist cleaned groups if dummy data was filtered
+  useEffect(() => {
+    if (Array.isArray(groups) && validGroups.length !== groups.length) {
+      setGroups(validGroups);
+    }
+  }, [groups, validGroups, setGroups]);
+
+  // Resolve Active Group
+  const activeGroup = useMemo(() => {
+    return validGroups.find((g) => g.id === activeGroupId) || validGroups[0] || null;
+  }, [validGroups, activeGroupId]);
+
+  const roommates = useMemo(() => activeGroup?.members || [], [activeGroup]);
+  const expenses = useMemo(() => activeGroup?.expenses || [], [activeGroup]);
+
+  // Compute aggregated history across all groups (newest first)
+  const allHistory = useMemo(() => {
+    const list = [];
+    validGroups.forEach((g) => {
+      (g.history || []).forEach((h) => {
+        list.push({ ...h, groupId: g.id, groupName: g.name });
+      });
+    });
+    list.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+    return list;
+  }, [validGroups]);
+
+  // Keep activeGroupId synced if group gets deleted or updated
+  useEffect(() => {
+    if (validGroups.length > 0) {
+      if (!activeGroupId || !validGroups.some((g) => g.id === activeGroupId)) {
+        setActiveGroupId(validGroups[0].id);
+      }
+    } else if (activeGroupId) {
+      setActiveGroupId(null);
+    }
+  }, [validGroups, activeGroupId, setActiveGroupId]);
+
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Backup & Restore State
+  const [pendingBackup, setPendingBackup] = useState(null);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [isBackupLoading, setIsBackupLoading] = useState(false);
+
   // Modals
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalSettling, setSaveModalSettling] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const transactions = useMemo(() => calculateSettlement(expenses, roommates), [expenses, roommates]);
   const totalSpent = useMemo(() => calculateTotalSpent(expenses, roommates), [expenses, roommates]);
-  const grandTotalSpent = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
+  // 1. Group Actions
+  const handleCreateGroup = ({ name, category = 'trip', initialMembers = [] }) => {
+    const newGroup = {
+      id: `grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: name.trim(),
+      category,
+      members: initialMembers,
+      expenses: [],
+      history: [],
+      createdAt: new Date().toISOString(),
+    };
+    setGroups((prev) => [...(Array.isArray(prev) ? prev : []), newGroup]);
+    setActiveGroupId(newGroup.id);
+    setToast({ message: `Group "${newGroup.name}" created!`, type: 'success' });
+  };
+
+  const handleUpdateGroupInfo = (groupId, updates) => {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g))
+    );
+    setToast({ message: 'Group updated successfully!', type: 'success' });
+  };
+
+  const handleDeleteGroup = (groupId) => {
+    const target = groups.find((g) => g.id === groupId);
+    if (!target) return;
+
+    setConfirmConfig({
+      title: `Delete "${target.name}"?`,
+      message: `This will permanently remove "${target.name}", its ${target.expenses?.length || 0} active expenses, and its ${target.history?.length || 0} saved logs. This cannot be undone.`,
+      confirmText: 'Yes, Delete Group',
+      onConfirm: () => {
+        const remaining = groups.filter((g) => g.id !== groupId);
+        setGroups(remaining);
+        if (activeGroupId === groupId) {
+          setActiveGroupId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        setConfirmConfig(null);
+        setToast({ message: `Group "${target.name}" deleted.`, type: 'info' });
+      },
+    });
+  };
+
+  const handleUpdateMembers = (newMembers) => {
+    if (!activeGroup) return;
+    setGroups((prev) =>
+      prev.map((g) => (g.id === activeGroup.id ? { ...g, members: newMembers } : g))
+    );
+  };
+
+  // 2. Expense Actions for Active Group
   const handleAddExpense = (expense) => {
-    setExpenses([expense, ...expenses]);
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? { ...g, expenses: [expense, ...(g.expenses || [])] }
+          : g
+      )
+    );
   };
 
   const handleUpdateExpense = (updatedExpense) => {
-    setExpenses(expenses.map(e => e.id === updatedExpense.id ? updatedExpense : e));
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? {
+              ...g,
+              expenses: (g.expenses || []).map((e) =>
+                e.id === updatedExpense.id ? updatedExpense : e
+              ),
+            }
+          : g
+      )
+    );
     setEditingExpenseId(null);
     setToast({ message: 'Expense updated successfully!', type: 'success' });
   };
 
   const handleDeleteExpense = (id) => {
-    setExpenses(expenses.filter(e => e.id !== id));
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? { ...g, expenses: (g.expenses || []).filter((e) => e.id !== id) }
+          : g
+      )
+    );
   };
 
-  // Clear expense log on demand
   const handlePromptClearExpenses = () => {
+    if (!activeGroup) return;
+    const groupTitle = activeGroup.name || 'Group';
     setConfirmConfig({
-      title: "Clear Expense Log?",
-      message: "This will remove all current expenses from the screen. If you want to keep a permanent record in History, click 'Save Log' first. Are you sure you want to clear?",
-      confirmText: "Yes, Clear All",
+      title: `Clear "${groupTitle}" Expenses?`,
+      message: `This will remove all current expenses from "${groupTitle}". If you want to keep a permanent record in History, click 'Save Log' first. Are you sure you want to clear?`,
+      confirmText: 'Yes, Clear All',
       onConfirm: () => {
-        setExpenses([]);
+        setGroups((prev) =>
+          prev.map((g) => (g.id === activeGroup.id ? { ...g, expenses: [] } : g))
+        );
         setConfirmConfig(null);
-        setToast({ message: 'Expense log cleared.', type: 'success' });
-      }
+        setToast({ message: `Expense log for "${groupTitle}" cleared.`, type: 'success' });
+      },
     });
   };
 
-  // Open Save / Settle Session Modal
   const handleOpenSaveModal = (isSettling = false) => {
-    if (expenses.length === 0) {
+    if (!activeGroup || expenses.length === 0) {
       setToast({ message: 'No expenses to save. Please add some expenses first!', type: 'error' });
       return;
     }
@@ -74,72 +235,110 @@ export default function App() {
     setIsSaveModalOpen(true);
   };
 
-  // Save session snapshot into History and clear current active log
   const handleSaveSession = (sessionName, isSettled) => {
+    if (!activeGroup) return;
+    const groupTitle = activeGroup.name || 'Group';
     const newSession = createSessionSnapshot({
       name: sessionName,
       expenses,
       roommates,
+      groupId: activeGroup.id,
+      groupName: groupTitle,
       isSettled,
     });
 
-    setHistory([newSession, ...history]);
-    setExpenses([]); // Cleared on main screen as requested
-    setIsSaveModalOpen(false);
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? {
+              ...g,
+              history: [newSession, ...(g.history || [])],
+              expenses: [], // Cleared on active screen after saving to history
+            }
+          : g
+      )
+    );
 
+    setIsSaveModalOpen(false);
     setToast({
-      message: `Session "${newSession.name}" saved to History and log cleared!`,
+      message: `Session "${newSession.name}" saved to ${groupTitle} History!`,
       type: 'success',
     });
   };
 
-  // Delete a session from History
+  // 3. History Actions
   const handleDeleteHistorySession = (session) => {
     setConfirmConfig({
       title: `Delete "${session.name}"?`,
       message: `Are you sure you want to remove "${session.name}" from your History? This cannot be undone.`,
-      confirmText: "Yes, Delete",
+      confirmText: 'Yes, Delete',
       onConfirm: () => {
-        setHistory(history.filter(h => h.id !== session.id));
+        setGroups((prev) =>
+          prev.map((g) => {
+            const hasSession = (g.history || []).some((h) => h.id === session.id);
+            if (hasSession || g.id === session.groupId) {
+              return {
+                ...g,
+                history: (g.history || []).filter((h) => h.id !== session.id),
+              };
+            }
+            return g;
+          })
+        );
         setConfirmConfig(null);
         setToast({ message: `"${session.name}" removed from History.`, type: 'info' });
-      }
+      },
     });
   };
 
-  // Restore a session from History to active editor
   const handleRestoreHistorySession = (session) => {
     setConfirmConfig({
       title: `Load "${session.name}"?`,
-      message: `This will load the ${session.expenses.length} expenses from "${session.name}" into your active editor. Any unsaved current expenses will be replaced.`,
-      confirmText: "Load into Editor",
+      message: `This will load the ${session.expenses?.length || 0} expenses from "${session.name}" into the active editor.`,
+      confirmText: 'Load into Editor',
       onConfirm: () => {
-        // Merge roommates so active list includes all who participated
-        const combinedRoommates = Array.from(new Set([...roommates, ...(session.roommates || [])]));
-        setRoommates(combinedRoommates);
-        setExpenses(session.expenses || []);
+        const targetGroupId = session.groupId || activeGroup.id;
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.id === targetGroupId) {
+              const combinedMembers = Array.from(
+                new Set([...(g.members || []), ...(session.roommates || [])])
+              );
+              return {
+                ...g,
+                members: combinedMembers,
+                expenses: session.expenses || [],
+              };
+            }
+            return g;
+          })
+        );
+
+        if (targetGroupId !== activeGroupId) {
+          setActiveGroupId(targetGroupId);
+        }
+
         setConfirmConfig(null);
-        setIsHistoryModalOpen(false);
+        setActiveTab('split');
         setToast({
           message: `"${session.name}" loaded into your active screen!`,
           type: 'success',
         });
-      }
+      },
     });
   };
 
-
-
   const handleExportPDF = () => {
+    const groupTitle = activeGroup?.name || 'Group';
     setConfirmConfig({
-      title: "Download Expense Report?",
-      message: "Are you sure you want to generate and download your expense report as a PDF?",
-      confirmText: "Download PDF",
+      title: `Download ${groupTitle} PDF Report?`,
+      message: 'Are you sure you want to generate and download your expense report as a PDF?',
+      confirmText: 'Download PDF',
       onConfirm: async () => {
         setIsModalLoading(true);
         try {
-          await new Promise(resolve => setTimeout(resolve, 150));
-          generatePDF(expenses, roommates, transactions, totalSpent);
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          generatePDF(expenses, roommates, transactions, totalSpent, groupTitle);
           setToast({ message: 'PDF downloaded successfully!', type: 'success' });
         } catch (error) {
           console.error('PDF Generation Error:', error);
@@ -148,20 +347,21 @@ export default function App() {
           setIsModalLoading(false);
           setConfirmConfig(null);
         }
-      }
+      },
     });
   };
 
   const handleExportCSV = () => {
+    const groupTitle = activeGroup?.name || 'Group';
     setConfirmConfig({
-      title: "Download CSV Report?",
-      message: "Are you sure you want to generate and download your expense report as a CSV file?",
-      confirmText: "Download CSV",
+      title: `Download ${groupTitle} CSV Report?`,
+      message: 'Are you sure you want to generate and download your expense report as a CSV file?',
+      confirmText: 'Download CSV',
       onConfirm: async () => {
         setIsModalLoading(true);
         try {
-          await new Promise(resolve => setTimeout(resolve, 150));
-          generateCSV(expenses, transactions);
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          generateCSV(expenses, transactions, groupTitle);
           setToast({ message: 'CSV downloaded successfully!', type: 'success' });
         } catch (error) {
           console.error(error);
@@ -170,94 +370,391 @@ export default function App() {
           setIsModalLoading(false);
           setConfirmConfig(null);
         }
-      }
+      },
     });
   };
 
+  // Listen for incoming .evenly file intents (cold start and background taps)
+  useEffect(() => {
+    const cleanup = initBackupExtractor((backupPayload, fileUri, error) => {
+      if (error) {
+        setToast({
+          message: `Could not open backup: ${error.message}`,
+          type: 'error',
+        });
+        return;
+      }
+      if (backupPayload) {
+        setPendingBackup(backupPayload);
+        setIsRestoreModalOpen(true);
+      }
+    });
+
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  // Export full backup containing all groups
+  const handleExportBackup = async () => {
+    setIsBackupLoading(true);
+    try {
+      const res = await createBackup({
+        groups: validGroups,
+        activeGroupId,
+        roommates,
+        expenses,
+        history: allHistory,
+      });
+      setToast({
+        message: `Backup saved to ${res.savedLocation || res.fileName}!`,
+        type: 'success',
+      });
+    } catch (err) {
+      console.error('Backup creation error:', err);
+      setToast({
+        message: `Failed to create backup: ${err.message}`,
+        type: 'error',
+      });
+    } finally {
+      setIsBackupLoading(false);
+    }
+  };
+
+  // Import backup from file picker
+  const handleImportBackupFile = async (file) => {
+    setIsBackupLoading(true);
+    try {
+      const backup = await extractBackupFromFile(file);
+      setPendingBackup(backup);
+      setIsRestoreModalOpen(true);
+    } catch (err) {
+      console.error('Backup import error:', err);
+      setToast({
+        message: err.message || 'Failed to read backup file.',
+        type: 'error',
+      });
+    } finally {
+      setIsBackupLoading(false);
+    }
+  };
+
+  // Restore backup (Replace or Merge)
+  const handleConfirmRestore = (mode) => {
+    if (!pendingBackup?.data) return;
+
+    const { data } = pendingBackup;
+
+    if (mode === 'replace') {
+      if (Array.isArray(data.groups) && data.groups.length > 0) {
+        setGroups(data.groups);
+        if (data.activeGroupId) setActiveGroupId(data.activeGroupId);
+      } else {
+        const migrated = migrateToGroups([], data.roommates, data.expenses, data.history);
+        setGroups(migrated);
+        setActiveGroupId(migrated[0].id);
+      }
+      setToast({
+        message: 'All groups and data replaced from backup successfully!',
+        type: 'success',
+      });
+    } else if (mode === 'merge') {
+      if (Array.isArray(data.groups) && data.groups.length > 0) {
+        setGroups((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newGroups = data.groups.filter((g) => !existingIds.has(g.id));
+          const mergedExisting = prev.map((g) => {
+            const incoming = data.groups.find((ig) => ig.id === g.id);
+            if (!incoming) return g;
+            const combinedMembers = Array.from(
+              new Set([...g.members, ...(incoming.members || [])])
+            );
+            const existingExpIds = new Set((g.expenses || []).map((e) => e.id));
+            const newExp = (incoming.expenses || []).filter((e) => !existingExpIds.has(e.id));
+            const existingHistIds = new Set((g.history || []).map((h) => h.id));
+            const newHist = (incoming.history || []).filter((h) => !existingHistIds.has(h.id));
+            return {
+              ...g,
+              members: combinedMembers,
+              expenses: [...(g.expenses || []), ...newExp],
+              history: [...newHist, ...(g.history || [])],
+            };
+          });
+          return [...mergedExisting, ...newGroups];
+        });
+      } else {
+        // Merge legacy backup into active group
+        handleUpdateMembers(Array.from(new Set([...roommates, ...(data.roommates || [])])));
+        const existingExpIds = new Set(expenses.map((e) => e.id));
+        const newExp = (data.expenses || []).filter((e) => !existingExpIds.has(e.id));
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === activeGroup.id ? { ...g, expenses: [...(g.expenses || []), ...newExp] } : g
+          )
+        );
+      }
+
+      setToast({
+        message: 'Backup merged with current data successfully!',
+        type: 'success',
+      });
+    }
+
+    setIsRestoreModalOpen(false);
+    setPendingBackup(null);
+  };
+
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text font-sans selection:bg-brand-primary/20 selection:text-brand-text pb-16 transition-colors duration-200">
+    <div className="min-h-screen bg-brand-bg text-brand-text font-sans selection:bg-brand-primary/20 selection:text-brand-text pb-6 transition-colors duration-200">
 
       {/* Sticky Header */}
-      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-brand-border shadow-2xs">
+      <header className="sticky top-0 z-50 bg-evenly-surface border-b border-brand-border shadow-2xs transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-evenly-coral flex items-center justify-center shadow-xs flex-shrink-0">
               <Receipt size={22} className="text-white sm:w-6 sm:h-6" strokeWidth={2.0} />
             </div>
-            <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text bg-gradient-to-r from-evenly-coral to-evenly-coral-deep">
+            <span className="text-xl sm:text-2xl font-black text-brand-text tracking-tight">
               Evenly
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* History Menu Button */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* History Menu Button (Opens separate page like settings with cross button to exit) */}
             <button
-              onClick={() => setIsHistoryModalOpen(true)}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border border-brand-border bg-white hover:border-brand-border-hover hover:bg-evenly-sage/40 transition-all text-brand-text shadow-xs cursor-pointer"
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border border-brand-border bg-evenly-surface hover:border-brand-border-hover hover:bg-evenly-sage/40 transition-all text-brand-text shadow-xs cursor-pointer"
               title="Open Expense History"
             >
               <Clock className="w-4 h-4 text-evenly-coral-deep flex-shrink-0" />
               <span>History</span>
-              {history.length > 0 && (
-                <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-black bg-evenly-coral/50 text-brand-text rounded-full">
-                  {history.length}
-                </span>
-              )}
             </button>
 
-            {/* Total Spent Display */}
-            <div className="flex flex-col items-end border-l border-brand-border pl-2.5 sm:pl-4">
-              <span className="text-[9px] sm:text-[10px] font-bold text-brand-text-secondary uppercase tracking-wider">
-                Total Spent
-              </span>
-              <span className="font-bold text-brand-text text-base sm:text-lg leading-none mt-0.5">
-                {formatCurrency(grandTotalSpent)}
-              </span>
-            </div>
+            {/* Settings Button (Opens Sidebar Sheet) */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border border-brand-border bg-evenly-surface hover:border-brand-border-hover hover:bg-evenly-sage/40 transition-all text-brand-text shadow-xs cursor-pointer"
+              title="Open Settings & Backups"
+            >
+              <Settings className="w-4 h-4 text-brand-primary flex-shrink-0" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
           </div>
         </div>
       </header>
 
+      {/* Tab Navigation (Dashboard vs Split) */}
+      <div className="max-w-4xl mx-auto px-4 pt-4 sm:pt-6">
+        <div className="bg-evenly-surface p-1 rounded-2xl border border-brand-border shadow-xs flex items-center gap-1 sm:gap-2 transition-colors">
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'dashboard'
+                ? 'bg-evenly-coral text-brand-text shadow-xs'
+                : 'text-brand-text-secondary hover:text-brand-text hover:bg-evenly-sage/40'
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4 text-evenly-coral-deep" />
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('split')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'split'
+                ? 'bg-evenly-coral text-brand-text shadow-xs'
+                : 'text-brand-text-secondary hover:text-brand-text hover:bg-evenly-sage/40'
+            }`}
+          >
+            <Receipt className="w-4 h-4 text-evenly-coral-deep" />
+            <span>Split</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-4 py-5 sm:py-6 space-y-6">
+        {editingExpenseId ? (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="bg-evenly-surface rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-brand-border flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingExpenseId(null)}
+                  className="p-2 rounded-xl border border-brand-border bg-brand-bg hover:bg-evenly-sage/40 text-brand-text transition-colors cursor-pointer"
+                  title="Cancel edit"
+                  aria-label="Back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-brand-text tracking-tight">
+                    Edit Expense
+                  </h1>
+                  <p className="text-xs text-brand-text-secondary mt-0.5">
+                    Modify expense details and contribution splits.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        <RoommateManager
-          roommates={roommates}
-          setRoommates={setRoommates}
-        />
+            <div className="bg-evenly-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-brand-border">
+              <ExpenseForm
+                roommates={roommates}
+                onAddExpense={handleUpdateExpense}
+                initialData={expenses.find(e => e.id === editingExpenseId)}
+                onCancel={() => setEditingExpenseId(null)}
+              />
+            </div>
+          </div>
+        ) : activeTab === 'split' ? (
+          <div className="bg-evenly-surface rounded-2xl sm:rounded-3xl border border-brand-border shadow-xs divide-y divide-brand-border overflow-hidden animate-in fade-in-50 duration-200">
+            {/* 1. Groups & Members */}
+            <div className="p-5 sm:p-7">
+              <GroupManager
+                groups={validGroups}
+                activeGroupId={activeGroupId}
+                onSelectGroup={(id) => setActiveGroupId(id)}
+                onCreateGroup={handleCreateGroup}
+                onUpdateGroup={handleUpdateGroupInfo}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateMembers={handleUpdateMembers}
+              />
+            </div>
 
-        <ExpenseForm
-          roommates={roommates}
-          onAddExpense={handleAddExpense}
-        />
+            {/* 2. Add an Expense */}
+            <div className="p-5 sm:p-7">
+              <ExpenseForm
+                roommates={roommates}
+                onAddExpense={handleAddExpense}
+              />
+            </div>
 
-        <BalanceDashboard
-          expenses={expenses}
-          transactions={transactions}
-          onSettleUp={() => handleOpenSaveModal(true)}
-          onSaveSession={() => handleOpenSaveModal(false)}
-          onExportPDF={handleExportPDF}
-          onExportCSV={handleExportCSV}
-        />
+            {/* 3. Who Owes What */}
+            <div className="p-5 sm:p-7">
+              <BalanceDashboard
+                expenses={expenses}
+                transactions={transactions}
+                roommates={roommates}
+                totalSpent={totalSpent}
+                groupName={activeGroup?.name || ''}
+                onSettleUp={() => handleOpenSaveModal(true)}
+                onSaveSession={() => handleOpenSaveModal(false)}
+                onExportPDF={handleExportPDF}
+                onExportCSV={handleExportCSV}
+                onNotify={setToast}
+              />
+            </div>
 
-        <ExpenseLog
-          expenses={expenses}
-          onDeleteExpense={handleDeleteExpense}
-          onEditExpense={setEditingExpenseId}
-          onClearLog={handlePromptClearExpenses}
-          onSaveLog={() => handleOpenSaveModal(false)}
-          onOpenHistory={() => setIsHistoryModalOpen(true)}
-          historyCount={history.length}
-        />
+            {/* 4. Expense Log */}
+            <div className="p-5 sm:p-7">
+              <ExpenseLog
+                expenses={expenses}
+                roommates={roommates}
+                onDeleteExpense={handleDeleteExpense}
+                onEditExpense={setEditingExpenseId}
+                onClearLog={handlePromptClearExpenses}
+                onSaveLog={() => handleOpenSaveModal(false)}
+                onOpenHistory={() => setIsHistoryOpen(true)}
+                historyCount={allHistory.length}
+              />
+            </div>
 
-        <TotalSpent
-          expenses={expenses}
-          totalSpent={totalSpent}
-        />
-
+            {/* 5. Total Spent by Person */}
+            <div className="p-5 sm:p-7">
+              <TotalSpent
+                expenses={expenses}
+                totalSpent={totalSpent}
+              />
+            </div>
+          </div>
+        ) : (
+          <DashboardTab
+            groups={validGroups}
+            activeGroupId={activeGroupId}
+            onSelectGroup={(id) => setActiveGroupId(id)}
+            expenses={expenses}
+            roommates={roommates}
+            transactions={transactions}
+            totalSpent={totalSpent}
+            history={allHistory}
+            onSwitchToSplit={() => setActiveTab('split')}
+          />
+        )}
       </main>
 
-      <Footer />
+      <Footer onNavigate={(p) => setActiveTab(p)} />
+
+      {/* History Page (Opens as a separate page like settings with cross button to exit) */}
+      <HistoryPage
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={allHistory}
+        groups={validGroups}
+        onDeleteSession={handleDeleteHistorySession}
+        onRestoreSession={(session) => {
+          handleRestoreHistorySession(session);
+          setIsHistoryOpen(false);
+        }}
+        onNotify={setToast}
+      />
+
+      {/* Full-Page View for Footer Pages (Occupies entire space like settings) */}
+      {['about', 'terms', 'privacy', 'contact'].includes(activeTab) && (
+        <div className="fixed inset-0 z-[120] bg-brand-bg flex flex-col h-full overflow-hidden animate-in fade-in-50 duration-200">
+          <div className="bg-evenly-surface border-b border-brand-border px-4 sm:px-6 py-4 flex items-center justify-between shrink-0 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className="p-2 rounded-xl border border-brand-border bg-brand-bg hover:bg-evenly-sage/40 text-brand-text transition-colors cursor-pointer"
+                title="Back to dashboard"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-black text-brand-text tracking-tight">
+                  {activeTab === 'about' && 'About Evenly'}
+                  {activeTab === 'terms' && 'Terms of Service'}
+                  {activeTab === 'privacy' && 'Privacy Policy'}
+                  {activeTab === 'contact' && 'Contact Us'}
+                </h1>
+                <p className="text-xs text-brand-text-secondary mt-0.5">
+                  {activeTab === 'about' && 'Minimalist expense tracking notebook.'}
+                  {activeTab === 'terms' && 'Terms and on-device usage conditions.'}
+                  {activeTab === 'privacy' && 'Zero tracking and offline privacy policy.'}
+                  {activeTab === 'contact' && 'Get in touch with the team.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8">
+            <div className="max-w-3xl mx-auto bg-evenly-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-brand-border shadow-xs">
+              {activeTab === 'about' && <About />}
+              {activeTab === 'terms' && <Terms />}
+              {activeTab === 'privacy' && <Privacy />}
+              {activeTab === 'contact' && <Contact />}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Sheet Sidebar */}
+      <SettingsSheet
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        groups={validGroups}
+        activeGroupId={activeGroupId}
+        expenses={expenses}
+        history={allHistory}
+        onExportBackup={handleExportBackup}
+        onImportBackupFile={handleImportBackupFile}
+        isBackupLoading={isBackupLoading}
+      />
 
       {/* Save Session Modal */}
       <SaveSessionModal
@@ -267,35 +764,20 @@ export default function App() {
         isSettling={saveModalSettling}
         expenses={expenses}
         roommates={roommates}
+        groupName={activeGroup?.name || ''}
       />
 
-      {/* History Modal */}
-      <HistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-        history={history}
-        onDeleteSession={handleDeleteHistorySession}
-        onRestoreSession={handleRestoreHistorySession}
+      {/* Restore Backup Modal */}
+      <RestoreModal
+        isOpen={isRestoreModalOpen}
+        backupPayload={pendingBackup}
+        onClose={() => {
+          setIsRestoreModalOpen(false);
+          setPendingBackup(null);
+        }}
+        onConfirmRestore={handleConfirmRestore}
+        isLoading={isBackupLoading}
       />
-
-      {/* Edit Expense Modal */}
-      {editingExpenseId && (
-        <div className="fixed inset-0 z-[100] bg-brand-text/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full my-8 relative max-h-[90vh] flex flex-col">
-            <div className="sticky top-0 bg-white z-10 pb-4 pt-6 px-6 sm:px-8 border-b border-brand-border rounded-t-2xl">
-              <h2 className="text-xl font-bold text-brand-text">Edit Expense</h2>
-            </div>
-            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
-              <ExpenseForm
-                roommates={roommates}
-                onAddExpense={handleUpdateExpense}
-                initialData={expenses.find(e => e.id === editingExpenseId)}
-                onCancel={() => setEditingExpenseId(null)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Confirmation Modal */}
       <ConfirmModal
