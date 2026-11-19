@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Sparkles, Loader2, X, AlertCircle } from 'lucide-react';
+import { Camera, Sparkles, Loader2, X } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/Checkbox';
@@ -242,97 +242,58 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
             aria-hidden="true"
           />
 
-          <div className="bg-evenly-surface rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full relative z-10 p-6 sm:p-7 border border-brand-border modal-animate-in space-y-5">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-evenly-coral flex items-center justify-center text-white shrink-0 shadow-xs">
-                  <Camera className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-bold text-brand-text">
-                      Receipt Scanner
-                    </h3>
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                      Beta
-                    </span>
-                  </div>
-                  <p className="text-xs text-brand-text-secondary mt-0.5">
-                    100% on-device private text recognition
-                  </p>
-                </div>
+          <div className="bg-evenly-surface rounded-2xl shadow-xl max-w-sm w-full relative z-10 p-4 sm:p-5 border border-brand-border modal-animate-in space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-brand-text">
+                  Receipt Scanner
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  Beta
+                </span>
               </div>
-
               <button
                 type="button"
                 onClick={() => setIsBetaModalOpen(false)}
-                className="p-1.5 rounded-lg text-brand-text-secondary hover:text-brand-text hover:bg-brand-bg transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-brand-text-secondary hover:text-brand-text hover:bg-brand-bg transition-colors cursor-pointer"
                 aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Disclaimer & Explanation */}
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>Beta Feature Notice</span>
-              </div>
-              <p className="leading-relaxed">
-                Receipt scanning is currently in Beta and runs locally on your device.
-                Because lighting, crumpled thermal paper, and varied receipt layouts can impact recognition, accuracy may vary.
-              </p>
-            </div>
+            <p className="text-xs text-brand-text-secondary leading-relaxed">
+              On-device receipt scanning is experimental. Recognition accuracy may vary depending on lighting and print quality—please verify the extracted details before saving.
+            </p>
 
-            {/* Best Practice Tips */}
-            <div className="space-y-2 text-xs text-brand-text-secondary">
-              <span className="font-bold text-brand-text block">Tips for Best Results:</span>
-              <ul className="space-y-1.5 pl-1">
-                <li className="flex items-start gap-2">
-                  <span className="text-brand-primary">☀️</span>
-                  <span>Ensure bright, even lighting and lay the receipt flat.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-brand-primary">✂️</span>
-                  <span>Use the cropping tool to tightly frame the printed bill items and total.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-brand-primary">✏️</span>
-                  <span>Always review and verify extracted amounts before saving.</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Checkbox Don't show again */}
-            <label className="flex items-center gap-2.5 pt-1 text-xs text-brand-text-secondary cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-brand-text-secondary cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={dontShowBetaAgain}
                 onChange={(e) => setDontShowBetaAgain(e.target.checked)}
-                className="rounded border-brand-border text-brand-primary focus:ring-brand-primary/20 w-4 h-4 cursor-pointer"
+                className="rounded border-brand-border text-brand-primary focus:ring-brand-primary/20 w-3.5 h-3.5 cursor-pointer"
               />
-              <span>Don't show this notice again</span>
+              <span>Don't show again</span>
             </label>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-brand-border/60">
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 py-2 text-xs font-bold"
+                size="sm"
+                className="px-3 py-1.5 text-xs font-semibold"
                 onClick={() => setIsBetaModalOpen(false)}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                className="flex-1 py-2 text-xs font-bold bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text border border-evenly-coral-deep/30 flex items-center justify-center gap-1.5"
+                size="sm"
+                className="px-3.5 py-1.5 text-xs font-semibold bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text border border-evenly-coral-deep/30 flex items-center gap-1.5"
                 onClick={handleConfirmBetaScan}
               >
                 <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
-                <span>Continue to Scan</span>
+                <span>Continue</span>
               </Button>
             </div>
           </div>
