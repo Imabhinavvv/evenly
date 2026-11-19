@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Evenly (com.algorithmaliens.evenly)</title>
+  <meta name="description" content="Privacy Policy for Evenly, an offline-first expense splitting application developed by Algorithm Aliens.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23FFFFFF'/%3E%3Ccircle cx='256' cy='256' r='140' fill='%23FFB7B2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #FDFCF8;
+      --surface: #FFFFFF;
+      --surface-subtle: #F7F6F0;
+      --border: #E8E6DD;
+      --text: #141316;
+      --text-secondary: #6B6861;
+      --primary: #E07A72;
+      --primary-subtle: rgba(224, 122, 114, 0.12);
+      --accent: #6C8C7A;
+      --accent-subtle: rgba(108, 140, 122, 0.12);
+      --code-bg: #EFEFE9;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141316;
+        --surface: #1E1D22;
+        --surface-subtle: #26252B;
+        --border: #323038;
+        --text: #FDFCF8;
+        --text-secondary: #A6A39C;
+        --primary: #FFB7B2;
+        --primary-subtle: rgba(255, 183, 178, 0.15);
+        --accent: #8DAFA0;
+        --accent-subtle: rgba(141, 175, 160, 0.15);
+        --code-bg: #2A2930;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 32px 0 24px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+    }
+
+    .meta-val {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px sm:padding: 28px;
+      padding: 28px 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 16px 0 6px 0;
+      color: var(--text);
+    }
+
+    p {
+      color: var(--text);
+      font-size: 0.9375rem;
+      margin-bottom: 12px;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      margin-left: 20px;
+      margin-bottom: 12px;
+      color: var(--text);
+      font-size: 0.9375rem;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    li:last-child {
+      margin-bottom: 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85em;
+      background-color: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    .callout {
+      background: var(--primary-subtle);
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 0 12px 12px 0;
+      margin: 16px 0;
+    }
+
+    .callout p {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 16px 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface-subtle);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 0 20px 0;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E07A72" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <path d="M12 6v12"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Evenly</h1>
+          <span class="badge">100% Offline &amp; Privacy-First</span>
+        </div>
+      </div>
+
+      <p style="color: var(--text-secondary); font-size: 1rem;">
+        Official Privacy Policy for the Evenly mobile and web application.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Application</span>
+          <span class="meta-val">Evenly</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Package ID</span>
+          <span class="meta-val"><code>com.algorithmaliens.evenly</code></span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Developer</span>
+          <span class="meta-val">Algorithm Aliens</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Effective Date</span>
+          <span class="meta-val">November 20, 2026</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- 1. Introduction -->
+      <section>
+        <h2>1. Introduction</h2>
+        <p>
+          At <strong>Algorithm Aliens</strong>, we built <strong>Evenly</strong> with a foundational belief: <em>your personal finances, roommate arrangements, and trip expenses belong solely to you</em>.
+        </p>
+        <p>
+          Evenly operates as a <strong>100% offline-first application</strong>. We do not operate remote user accounts, we do not require email sign-in, and we do not transmit, analyze, or monetize your financial logs. All expense calculations, split debt algorithms, OCR receipt parsing, and database storage are executed locally on your device.
+        </p>
+        <div class="callout">
+          <p>
+            <strong>Summary:</strong> Evenly has zero servers, zero analytics SDKs, zero advertising trackers, and zero third-party telemetry.
+          </p>
+        </div>
+      </section>
+
+      <!-- 2. Information We Collect -->
+      <section>
+        <h2>2. Information We Collect (and Do Not Collect)</h2>
+        <p>
+          Unlike cloud-dependent expense splitting tools, Evenly does not harvest, store, or transmit any personal data.
+        </p>
+
+        <h3>Data We DO NOT Collect:</h3>
+        <ul>
+          <li><strong>Personal Identifiable Information (PII):</strong> We do not ask for or collect your legal name, email address, phone number, government ID, or social logins.</li>
+          <li><strong>Banking &amp; Financial Credentials:</strong> We do not connect to bank accounts, credit cards, UPI, or payment gateways. Evenly is a debt calculator, not a payment processor.</li>
+          <li><strong>Precise or Approximate Geolocation:</strong> We never access or track your GPS coordinates or IP location.</li>
+          <li><strong>Device &amp; Advertising Identifiers:</strong> We do not read Google Advertising IDs (AAID), Android IDs, or hardware identifiers.</li>
+          <li><strong>Usage Analytics:</strong> We do not track which screens you view, which buttons you tap, or how long you use the app.</li>
+        </ul>
+
+        <h3>Data Handled Locally on Your Device:</h3>
+        <p>
+          The information you enter into Evenly (group names, member names, expense descriptions, payment amounts, and dates) is stored exclusively in your device's sandbox storage (<code>localStorage</code>). This data never leaves your device unless you explicitly choose to share an individual log via an export action.
+        </p>
+      </section>
+
+      <!-- 3. Device Permissions -->
+      <section>
+        <h2>3. Device Permissions &amp; How They Are Used</h2>
+        <p>
+          Evenly requests only the minimal Android permissions necessary to provide user-initiated features. Each permission is described below:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>Type</th>
+                <th>Purpose &amp; Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>android.permission.CAMERA</code></td>
+                <td>Runtime Permission</td>
+                <td>
+                  <strong>On-Device OCR &amp; QR Scanning:</strong> Requested only when you tap the camera scanner to read a receipt or scan a peer-to-peer transfer QR code. Video frames and photo captures are processed 100% in volatile device memory and discarded immediately. No images or videos are ever uploaded to cloud servers.
+                </td>
+              </tr>
+              <tr>
+                <td><code>android.permission.INTERNET</code></td>
+                <td>Normal Permission</td>
+                <td>
+                  <strong>WebView Engine:</strong> Required by the Android operating system to render the internal local HTML5/React user interface via standard WebView sockets. Evenly does not make outbound HTTP requests to remote analytics, tracking, or telemetry APIs.
+                </td>
+              </tr>
+              <tr>
+                <td><code>Storage &amp; Filesystem</code></td>
+                <td>Scoped Access</td>
+                <td>
+                  <strong>User-Initiated Backup &amp; Report Export:</strong> Used strictly when you explicitly tap to generate a PDF summary, CSV spreadsheet, or <code>.evenly</code> workspace archive. Files are saved to your chosen local directory or shared via the native Android Share sheet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. On-Device OCR Receipt Scanning -->
+      <section>
+        <h2>4. On-Device OCR Receipt Recognition</h2>
+        <p>
+          Evenly includes an optical character recognition (OCR) tool to extract expense items, amounts, and dates from paper receipts.
+        </p>
+        <ul>
+          <li><strong>Powered by Google ML Kit:</strong> The machine learning text recognition model runs entirely on your device's local processor.</li>
+          <li><strong>No Cloud Processing:</strong> Receipt images are never sent to external servers or cloud vision APIs.</li>
+          <li><strong>Zero Image Retention:</strong> The temporary image bitmap is analyzed in memory and immediately discarded. Evenly does not maintain a gallery or upload history of scanned receipts.</li>
+        </ul>
+      </section>
+
+      <!-- 5. Peer-to-Peer Log Sharing -->
+      <section>
+        <h2>5. Air-Gapped Peer-to-Peer Log Sharing</h2>
+        <p>
+          Evenly allows you to share individual calculation logs directly with another device using air-gapped QR codes or lightweight <code>.evenly</code> archive files.
+        </p>
+        <ul>
+          <li><strong>Dynamic QR Code Transfer:</strong> The QR code contains an encrypted-format string encoding only the items, members, amounts, and settlement status of that specific session. The exchange occurs directly from screen to camera without routing through the internet.</li>
+          <li><strong>Single-Log <code>.evenly</code> Files:</strong> When you share an expense log via Quick Share, Bluetooth, messaging, or Drive, only that single log is packaged. Your other private groups and full database are not included.</li>
+        </ul>
+      </section>
+
+      <!-- 6. Data Retention and Deletion -->
+      <section>
+        <h2>6. Data Retention and User Control</h2>
+        <p>
+          Because all data resides locally on your device:
+        </p>
+        <ul>
+          <li><strong>Full User Control:</strong> You can edit or delete any individual expense, member, group, or history session at any time directly within the app.</li>
+          <li><strong>Complete Deletion:</strong> Clearing Evenly's app data in Android system settings or uninstalling the app permanently deletes all stored logs, groups, and calculation history.</li>
+          <li><strong>Backup Portability:</strong> You can export full workspace backups to a <code>.evenly</code> file and restore them on another device at your own discretion.</li>
+        </ul>
+      </section>
+
+      <!-- 7. Children's Privacy -->
+      <section>
+        <h2>7. Children's Privacy (COPPA &amp; GDPR Compliance)</h2>
+        <p>
+          Evenly is a general audience financial utility and does not knowingly collect, store, or solicit personal information from children under the age of 13 (or under 16 in the European Economic Area). Since the app collects no personal information whatsoever, it is fully compliant with the Children's Online Privacy Protection Act (COPPA) and international privacy frameworks.
+        </p>
+      </section>
+
+      <!-- 8. Third-Party Services -->
+      <section>
+        <h2>8. Third-Party Services &amp; Disclosures</h2>
+        <p>
+          Evenly does not incorporate third-party advertising networks, analytics trackers (such as Google Analytics, Firebase Analytics, Flurry, or Mixpanel), or user profiling SDKs.
+        </p>
+        <p>
+          The app relies only on official Google Play Core components and open-source, on-device libraries (Capacitor, React, Google ML Kit on-device runtime). None of these components transmit user financial logs or personal data to remote servers.
+        </p>
+      </section>
+
+      <!-- 9. Security -->
+      <section>
+        <h2>9. Security</h2>
+        <p>
+          By maintaining a zero-cloud, 100% local architecture, Evenly inherently eliminates common cloud vulnerabilities such as remote database leaks, server misconfigurations, and unauthorized credential access. Your data remains protected by your physical device's operating system security, hardware encryption, and biometric screen locks.
+        </p>
+      </section>
+
+      <!-- 10. Updates to This Policy -->
+      <section>
+        <h2>10. Updates to This Privacy Policy</h2>
+        <p>
+          We may update our Privacy Policy from time to time to reflect new offline features or legal requirements. Any modifications will be posted to this page with an updated "Effective Date". Because Evenly does not store user contact information, we encourage you to review this page periodically.
+        </p>
+      </section>
+
+      <!-- 11. Contact Information -->
+      <section>
+        <h2>11. Contact Us</h2>
+        <p>
+          If you have questions, feedback, or inquiries regarding this Privacy Policy or Evenly's offline architecture, please contact the development team at:
+        </p>
+        <div style="margin-top: 12px; line-height: 1.8;">
+          <p><strong>Algorithm Aliens Development Team:</strong></p>
+          <ul style="list-style: none; margin-left: 0;">
+            <li>• <strong>Abhinav Mamidi:</strong> <a href="mailto:abhinavmamidi.mails@gmail.com">abhinavmamidi.mails@gmail.com</a></li>
+            <li>• <strong>Thanmay Sadguru Musa:</strong> <a href="mailto:thanmaysadguru.mails@gmail.com">thanmaysadguru.mails@gmail.com</a></li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 Algorithm Aliens. All rights reserved.</p>
+      <p style="margin-top: 4px;">Evenly (Package: <code>com.algorithmaliens.evenly</code>) is open-source under the MIT License.</p>
+    </footer>
+  </div>
+</body>
+</html>
