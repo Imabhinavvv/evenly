@@ -1,4 +1,4 @@
-package com.evenly.app;
+package com.algorithmaliens.evenly;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Evenly</string>
     <string name="title_activity_main">Evenly</string>
-    <string name="package_name">com.evenly.app</string>
-    <string name="custom_url_scheme">com.evenly.app</string>
+    <string name="package_name">com.algorithmaliens.evenly</string>
+    <string name="custom_url_scheme">com.algorithmaliens.evenly</string>
 </resources>
