@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Sparkles, Loader2, X } from 'lucide-react';
+import { Camera, Loader2, X } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/Checkbox';
@@ -13,11 +13,19 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
 
   // Receipt OCR State
   const [isScanning, setIsScanning] = useState(false);
-  const [scanStatus, setScanStatus] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
   const [scanError, setScanError] = useState(null);
   const [detectedItems, setDetectedItems] = useState([]);
   const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
   const [dontShowBetaAgain, setDontShowBetaAgain] = useState(false);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   useEffect(() => {
     const onCurrencyChange = () => setActiveCurrencyState(getActiveCurrency());
@@ -150,7 +158,6 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
 
   const startScanProcess = async () => {
     setScanError(null);
-    setScanStatus(null);
     setIsScanning(true);
     try {
       const result = await scanReceipt();
@@ -172,7 +179,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       if (candidateItems && candidateItems.length > 0) {
         setDetectedItems(candidateItems);
       }
-      setScanStatus('Receipt recognized! Please verify the amount and description.');
+      setToastMessage('Receipt recognized');
     } catch (err) {
       setScanError(err.message || 'Failed to scan receipt image.');
     } finally {
@@ -208,7 +215,6 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       setPaidBy(roommates.reduce((acc, r) => ({ ...acc, [r]: '' }), {}));
       setSplitBetween(roommates);
       setDetectedItems([]);
-      setScanStatus(null);
       setScanError(null);
     }
   };
@@ -347,13 +353,6 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {scanStatus && (
-          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-brand-success/10 border border-brand-success/20 text-xs text-brand-success font-medium">
-            <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>{scanStatus}</span>
-          </div>
-        )}
-
         {scanError && (
           <div className="p-2.5 rounded-xl bg-brand-danger/10 border border-brand-danger/20 text-xs text-brand-danger font-medium">
             {scanError}
@@ -364,7 +363,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
           <div className="p-3 rounded-xl bg-evenly-surface border border-brand-border space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-brand-text">
-                Detected Items (tap to adopt description & amount):
+                Detected Items
               </span>
               <button
                 type="button"
@@ -520,6 +519,16 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
           </Button>
         </div>
       </form>
+
+      {/* Sleek Minimalistic Toast (Disappears after 2s) */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] modal-animate-in pointer-events-none">
+          <div className="bg-evenly-surface text-brand-text px-4 py-2 rounded-full shadow-lg border border-brand-border flex items-center gap-2 text-xs font-semibold backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-brand-success shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
