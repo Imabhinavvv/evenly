@@ -38,6 +38,21 @@ export default function GroupManager({
   const activeMembers = activeGroup?.members || [];
   const activeMeta = getGroupCategoryMeta(activeGroup?.category);
 
+  // Dismiss modals on back gesture
+  useEffect(() => {
+    if (!isCreateModalOpen && !isEditingGroup) return;
+    const handleBack = (e) => {
+      e.preventDefault();
+      if (isEditingGroup) {
+        setIsEditingGroup(false);
+      } else if (isCreateModalOpen) {
+        setIsCreateModalOpen(false);
+      }
+    };
+    window.addEventListener('hardwareBack', handleBack);
+    return () => window.removeEventListener('hardwareBack', handleBack);
+  }, [isCreateModalOpen, isEditingGroup]);
+
   // Add member to active group
   const handleAddMember = (e) => {
     e.preventDefault();

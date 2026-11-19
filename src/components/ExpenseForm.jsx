@@ -1,12 +1,39 @@
 import React, { useState, useEffect } from 'react';
+import { Camera, Sparkles, Loader2, X } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/Checkbox';
-import { formatCurrencyDecimal } from '../utils/currency';
+import { formatCurrencyDecimal, getActiveCurrency } from '../utils/currency';
+import { isReceiptScanSupported, scanReceipt } from '../utils/ocrService';
 
 export default function ExpenseForm({ roommates, onAddExpense, initialData, onCancel }) {
   const [description, setDescription] = useState(initialData ? initialData.description : '');
   const [total, setTotal] = useState(initialData ? (initialData.amount / 100).toString() : '');
+  const [activeCurrency, setActiveCurrencyState] = useState(getActiveCurrency);
+
+  // Receipt OCR State
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [detectedItems, setDetectedItems] = useState([]);
+
+  useEffect(() => {
+    const onCurrencyChange = () => setActiveCurrencyState(getActiveCurrency());
+    window.addEventListener('currencychange', onCurrencyChange);
+    return () => window.removeEventListener('currencychange', onCurrencyChange);
+  }, []);
+
+  // Back button listener for dismissing detected receipt items
+  useEffect(() => {
+    if (detectedItems.length === 0) return;
+    const handleBack = (e) => {
+      e.preventDefault();
+      setDetectedItems([]);
+    };
+    window.addEventListener('hardwareBack', handleBack);
+    return () => window.removeEventListener('hardwareBack', handleBack);
+  }, [detectedItems]);
+
   const [paidBy, setPaidBy] = useState(() => {
     if (initialData && initialData.paidBy) {
       const init = {};
@@ -90,6 +117,38 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
     }
   };
 
+  const handleScanReceipt = async () => {
+    setScanError(null);
+    setScanStatus(null);
+    setIsScanning(true);
+    try {
+      const result = await scanReceipt();
+      if (result.cancelled) {
+        return;
+      }
+      if (!result.success) {
+        setScanError(result.error || 'Could not parse receipt text.');
+        return;
+      }
+
+      const { merchant, totalAmount, candidateItems } = result.parsed;
+      if (merchant) {
+        setDescription(merchant);
+      }
+      if (totalAmount !== null && totalAmount > 0) {
+        setTotal(totalAmount.toString());
+      }
+      if (candidateItems && candidateItems.length > 0) {
+        setDetectedItems(candidateItems);
+      }
+      setScanStatus('Receipt recognized successfully! Review draft fields below.');
+    } catch (err) {
+      setScanError(err.message || 'Failed to scan receipt image.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!description.trim() || !isAmountValid || !isBalanced || splitBetween.length === 0) return;
@@ -117,6 +176,9 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       setTotal('');
       setPaidBy(roommates.reduce((acc, r) => ({ ...acc, [r]: '' }), {}));
       setSplitBetween(roommates);
+      setDetectedItems([]);
+      setScanStatus(null);
+      setScanError(null);
     }
   };
 
@@ -140,16 +202,101 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
 
   return (
     <div className={initialData ? "" : "space-y-6"}>
-      {!initialData && (
-        <div>
-          <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
-          <p className="text-xs text-brand-text-secondary mt-1">
-            Record a shared bill and split the cost amongst group members
-          </p>
+      {!initialData ? (
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
+            <p className="text-xs text-brand-text-secondary mt-1">
+              Record a shared bill and split the cost amongst group members
+            </p>
+          </div>
+
+          {isReceiptScanSupported() && (
+            <button
+              type="button"
+              onClick={handleScanReceipt}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-evenly-coral-deep/30 bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text shadow-2xs transition-all cursor-pointer disabled:opacity-60 flex-shrink-0"
+              title="Scan Receipt with Camera or Photo Library"
+            >
+              {isScanning ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-evenly-coral-deep" />
+              ) : (
+                <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
+              )}
+              <span>{isScanning ? 'Scanning...' : 'Scan Receipt'}</span>
+            </button>
+          )}
         </div>
+      ) : (
+        isReceiptScanSupported() && (
+          <div className="flex justify-end pb-2">
+            <button
+              type="button"
+              onClick={handleScanReceipt}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-evenly-coral-deep/30 bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+            >
+              {isScanning ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-evenly-coral-deep" />
+              ) : (
+                <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
+              )}
+              <span>{isScanning ? 'Scanning...' : 'Scan Receipt'}</span>
+            </button>
+          </div>
+        )
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        {scanStatus && (
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-brand-success/10 border border-brand-success/20 text-xs text-brand-success font-medium">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span>{scanStatus}</span>
+          </div>
+        )}
+
+        {scanError && (
+          <div className="p-2.5 rounded-xl bg-brand-danger/10 border border-brand-danger/20 text-xs text-brand-danger font-medium">
+            {scanError}
+          </div>
+        )}
+
+        {detectedItems.length > 0 && (
+          <div className="p-3 rounded-xl bg-evenly-surface border border-brand-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-brand-text">
+                Detected Items (tap to adopt description & amount):
+              </span>
+              <button
+                type="button"
+                onClick={() => setDetectedItems([])}
+                className="text-[11px] text-brand-text-secondary hover:text-brand-text cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Dismiss
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {detectedItems.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setDescription(item.title);
+                    setTotal(item.amount.toString());
+                  }}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-brand-bg border border-brand-border hover:border-brand-primary/40 hover:text-brand-primary transition-colors cursor-pointer text-left"
+                >
+                  <span className="font-medium text-brand-text">{item.title}</span>
+                  <span className="ml-1.5 text-brand-primary font-bold">
+                    {formatCurrencyDecimal(item.amount, activeCurrency.code)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-brand-text-secondary">Description</label>
@@ -161,7 +308,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-brand-text-secondary">Total Amount (₹)</label>
+            <label className="text-sm font-medium text-brand-text-secondary">Total Amount ({activeCurrency.symbol})</label>
             <Input
               type="number"
               step="0.01"
@@ -174,7 +321,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
             />
             {isAmountExceeded && (
               <p className="text-brand-danger text-xs font-medium mt-1">
-                Expense amount cannot exceed ₹1,00,00,000 (1 Crore).
+                Expense amount cannot exceed {activeCurrency.symbol}10,000,000.
               </p>
             )}
           </div>

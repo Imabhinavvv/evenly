@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Receipt, Clock, Settings, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { App as CapApp } from '@capacitor/app';
 import { useLocalStorage } from './utils/useLocalStorage';
 import { calculateSettlement, calculateTotalSpent } from './utils/settlement';
 import { generatePDF } from './utils/pdfExport';
@@ -117,6 +118,107 @@ export default function App() {
   // Modals
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalSettling, setSaveModalSettling] = useState(false);
+
+  // Currency change listener to re-render all currency displays
+  const [, setCurrencyTrigger] = useState(0);
+  useEffect(() => {
+    const onCurrencyChange = () => setCurrencyTrigger((n) => n + 1);
+    window.addEventListener('currencychange', onCurrencyChange);
+    return () => window.removeEventListener('currencychange', onCurrencyChange);
+  }, []);
+
+  // Back button / gesture navigation handler for Android & Capacitor
+  const backHandlerStateRef = useRef({});
+  backHandlerStateRef.current = {
+    confirmConfig,
+    isRestoreModalOpen,
+    isSaveModalOpen,
+    isSettingsOpen,
+    isHistoryOpen,
+    editingExpenseId,
+    activeTab,
+  };
+
+  useEffect(() => {
+    let listenerHandle = null;
+
+    const setupBackButton = async () => {
+      try {
+        listenerHandle = await CapApp.addListener('backButton', () => {
+          // 1. Dispatch custom event allowing child components/modals to intercept
+          const customBackEvent = new CustomEvent('hardwareBack', { cancelable: true });
+          window.dispatchEvent(customBackEvent);
+          if (customBackEvent.defaultPrevented) {
+            return;
+          }
+
+          const state = backHandlerStateRef.current;
+
+          // 2. Close active confirmation modal
+          if (state.confirmConfig) {
+            setConfirmConfig(null);
+            return;
+          }
+
+          // 3. Close active restore modal
+          if (state.isRestoreModalOpen) {
+            setIsRestoreModalOpen(false);
+            setPendingBackup(null);
+            return;
+          }
+
+          // 4. Close active save session modal
+          if (state.isSaveModalOpen) {
+            setIsSaveModalOpen(false);
+            return;
+          }
+
+          // 5. Close settings sheet
+          if (state.isSettingsOpen) {
+            setIsSettingsOpen(false);
+            return;
+          }
+
+          // 6. Close history page
+          if (state.isHistoryOpen) {
+            setIsHistoryOpen(false);
+            return;
+          }
+
+          // 7. Cancel editing mode in expense form
+          if (state.editingExpenseId !== null) {
+            setEditingExpenseId(null);
+            return;
+          }
+
+          // 8. Return to dashboard from footer pages
+          if (['about', 'terms', 'privacy', 'contact'].includes(state.activeTab)) {
+            setActiveTab('dashboard');
+            return;
+          }
+
+          // 9. Return to dashboard from split tab
+          if (state.activeTab === 'split') {
+            setActiveTab('dashboard');
+            return;
+          }
+
+          // 10. If on dashboard with no overlays open, exit to Android home screen
+          CapApp.exitApp();
+        });
+      } catch (err) {
+        console.warn('Capacitor backButton listener unavailable:', err);
+      }
+    };
+
+    setupBackButton();
+
+    return () => {
+      if (listenerHandle && typeof listenerHandle.remove === 'function') {
+        listenerHandle.remove();
+      }
+    };
+  }, []);
 
   const transactions = useMemo(() => calculateSettlement(expenses, roommates), [expenses, roommates]);
   const totalSpent = useMemo(() => calculateTotalSpent(expenses, roommates), [expenses, roommates]);
@@ -511,9 +613,6 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-evenly-surface border-b border-brand-border shadow-2xs transition-colors duration-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-evenly-coral flex items-center justify-center shadow-xs flex-shrink-0">
-              <Receipt size={22} className="text-white sm:w-6 sm:h-6" strokeWidth={2.0} />
-            </div>
             <span className="text-xl sm:text-2xl font-black text-brand-text tracking-tight">
               Evenly
             </span>
