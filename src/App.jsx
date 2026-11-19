@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Receipt, Clock, Settings, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { Receipt, Clock, Settings, LayoutDashboard, ArrowLeft, QrCode } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { useLocalStorage } from './utils/useLocalStorage';
 import { calculateSettlement, calculateTotalSpent } from './utils/settlement';
@@ -21,6 +21,8 @@ import Footer from './components/Footer';
 import SaveSessionModal from './components/SaveSessionModal';
 import HistoryPage from './components/HistoryPage';
 import RestoreModal from './components/RestoreModal';
+import ImportLogModal from './components/ImportLogModal';
+import QRScannerModal from './components/QRScannerModal';
 import About from './components/footer/About';
 import Terms from './components/footer/Terms';
 import Privacy from './components/footer/Privacy';
@@ -115,6 +117,11 @@ export default function App() {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [isBackupLoading, setIsBackupLoading] = useState(false);
 
+  // Single Log Peer Transfer & QR State
+  const [incomingLog, setIncomingLog] = useState(null);
+  const [isImportLogModalOpen, setIsImportLogModalOpen] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+
   // Modals
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalSettling, setSaveModalSettling] = useState(false);
@@ -132,6 +139,8 @@ export default function App() {
   backHandlerStateRef.current = {
     confirmConfig,
     isRestoreModalOpen,
+    isImportLogModalOpen,
+    isQRScannerOpen,
     isSaveModalOpen,
     isSettingsOpen,
     isHistoryOpen,
@@ -157,6 +166,19 @@ export default function App() {
           // 2. Close active confirmation modal
           if (state.confirmConfig) {
             setConfirmConfig(null);
+            return;
+          }
+
+          // Close QR scanner modal
+          if (state.isQRScannerOpen) {
+            setIsQRScannerOpen(false);
+            return;
+          }
+
+          // Close Import Log modal
+          if (state.isImportLogModalOpen) {
+            setIsImportLogModalOpen(false);
+            setIncomingLog(null);
             return;
           }
 
@@ -481,14 +503,19 @@ export default function App() {
     const cleanup = initBackupExtractor((backupPayload, fileUri, error) => {
       if (error) {
         setToast({
-          message: `Could not open backup: ${error.message}`,
+          message: `Could not open file: ${error.message}`,
           type: 'error',
         });
         return;
       }
       if (backupPayload) {
-        setPendingBackup(backupPayload);
-        setIsRestoreModalOpen(true);
+        if (backupPayload.isSingleLog) {
+          setIncomingLog(backupPayload.log);
+          setIsImportLogModalOpen(true);
+        } else {
+          setPendingBackup(backupPayload);
+          setIsRestoreModalOpen(true);
+        }
       }
     });
 
@@ -523,22 +550,114 @@ export default function App() {
     }
   };
 
-  // Import backup from file picker
+  // Import backup or single log from file picker
   const handleImportBackupFile = async (file) => {
     setIsBackupLoading(true);
     try {
       const backup = await extractBackupFromFile(file);
-      setPendingBackup(backup);
-      setIsRestoreModalOpen(true);
+      if (backup.isSingleLog) {
+        setIncomingLog(backup.log);
+        setIsImportLogModalOpen(true);
+      } else {
+        setPendingBackup(backup);
+        setIsRestoreModalOpen(true);
+      }
     } catch (err) {
-      console.error('Backup import error:', err);
+      console.error('File import error:', err);
       setToast({
-        message: err.message || 'Failed to read backup file.',
+        message: err.message || 'Failed to read file.',
         type: 'error',
       });
     } finally {
       setIsBackupLoading(false);
     }
+  };
+
+  // Handle scanned QR code payload
+  const handleScanQRSuccess = (decodedLog) => {
+    setIsQRScannerOpen(false);
+    setIncomingLog(decodedLog);
+    setIsImportLogModalOpen(true);
+  };
+
+  // Open single log as a new group
+  const handleImportOpenAsNewGroup = (log) => {
+    const newGroup = {
+      id: `grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: (log.name || 'Shared Log').trim(),
+      category: 'trip',
+      members: Array.isArray(log.roommates) ? log.roommates : [],
+      expenses: Array.isArray(log.expenses) ? log.expenses : [],
+      history: [],
+      createdAt: new Date().toISOString(),
+    };
+    setGroups((prev) => [...(Array.isArray(prev) ? prev : []), newGroup]);
+    setActiveGroupId(newGroup.id);
+    setIsImportLogModalOpen(false);
+    setIncomingLog(null);
+    setActiveTab('split');
+    setToast({
+      message: `Created group "${newGroup.name}" from shared log!`,
+      type: 'success',
+    });
+  };
+
+  // Load single log into the active group
+  const handleImportLoadToCurrentGroup = (log) => {
+    if (!activeGroup) {
+      handleImportOpenAsNewGroup(log);
+      return;
+    }
+    const combinedMembers = Array.from(
+      new Set([...(activeGroup.members || []), ...(log.roommates || [])])
+    );
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? {
+              ...g,
+              members: combinedMembers,
+              expenses: Array.isArray(log.expenses) ? log.expenses : [],
+            }
+          : g
+      )
+    );
+    setIsImportLogModalOpen(false);
+    setIncomingLog(null);
+    setActiveTab('split');
+    setToast({
+      message: `Loaded "${log.name || 'log'}" into ${activeGroup.name}!`,
+      type: 'success',
+    });
+  };
+
+  // Save single log directly to history
+  const handleImportSaveToHistory = (log) => {
+    if (!activeGroup) return;
+    const newSession = createSessionSnapshot({
+      name: log.name || 'Shared Log',
+      expenses: Array.isArray(log.expenses) ? log.expenses : [],
+      roommates: Array.isArray(log.roommates) ? log.roommates : [],
+      groupId: activeGroup.id,
+      groupName: activeGroup.name || 'Group',
+      isSettled: false,
+    });
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === activeGroup.id
+          ? {
+              ...g,
+              history: [newSession, ...(g.history || [])],
+            }
+          : g
+      )
+    );
+    setIsImportLogModalOpen(false);
+    setIncomingLog(null);
+    setToast({
+      message: `"${newSession.name}" saved to ${activeGroup.name} History!`,
+      type: 'success',
+    });
   };
 
   // Restore backup (Replace or Merge)
@@ -619,6 +738,16 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Scan QR Button */}
+            <button
+              onClick={() => setIsQRScannerOpen(true)}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border border-brand-border bg-evenly-surface hover:border-brand-border-hover hover:bg-evenly-sage/40 transition-all text-brand-text shadow-xs cursor-pointer"
+              title="Scan Evenly QR Code"
+            >
+              <QrCode className="w-4 h-4 text-brand-primary flex-shrink-0" />
+              <span className="hidden sm:inline">Scan QR</span>
+            </button>
+
             {/* History Menu Button (Opens separate page like settings with cross button to exit) */}
             <button
               onClick={() => setIsHistoryOpen(true)}
@@ -852,6 +981,7 @@ export default function App() {
         history={allHistory}
         onExportBackup={handleExportBackup}
         onImportBackupFile={handleImportBackupFile}
+        onScanQR={() => setIsQRScannerOpen(true)}
         isBackupLoading={isBackupLoading}
       />
 
@@ -876,6 +1006,27 @@ export default function App() {
         }}
         onConfirmRestore={handleConfirmRestore}
         isLoading={isBackupLoading}
+      />
+
+      {/* Import Single Log Modal */}
+      <ImportLogModal
+        isOpen={isImportLogModalOpen}
+        log={incomingLog}
+        onClose={() => {
+          setIsImportLogModalOpen(false);
+          setIncomingLog(null);
+        }}
+        onOpenAsNewGroup={handleImportOpenAsNewGroup}
+        onLoadToCurrentGroup={handleImportLoadToCurrentGroup}
+        onSaveToHistory={handleImportSaveToHistory}
+        activeGroupName={activeGroup?.name || 'Active Group'}
+      />
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScanSuccess={handleScanQRSuccess}
       />
 
       {/* Confirmation Modal */}

@@ -162,8 +162,25 @@ export async function parseAndValidateBackup(zipSource, options = {}) {
     throw new Error('Invalid backup data structure.');
   }
 
+  // Handle single log package (.evenly exported for sharing)
+  if (manifest.type === 'SINGLE_LOG' || data.type === 'SINGLE_LOG') {
+    const logData = data.log || data;
+    return {
+      manifest,
+      isSingleLog: true,
+      log: {
+        name: logData.name || manifest.meta?.name || 'Shared Log',
+        roommates: Array.isArray(logData.roommates) ? logData.roommates : [],
+        expenses: Array.isArray(logData.expenses) ? logData.expenses : [],
+        grandTotal: typeof logData.grandTotal === 'number' ? logData.grandTotal : undefined,
+        exportedAt: logData.exportedAt || manifest.timestamp,
+      },
+    };
+  }
+
   return {
     manifest,
+    isSingleLog: false,
     data: {
       groups: Array.isArray(data.groups) ? data.groups : [],
       activeGroupId: data.activeGroupId || null,

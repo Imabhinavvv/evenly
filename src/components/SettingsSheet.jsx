@@ -4,6 +4,7 @@ import {
   Settings,
   Download,
   Upload,
+  QrCode,
   HardDrive,
   ShieldCheck,
   Globe,
@@ -21,6 +22,7 @@ export default function SettingsSheet({
   history = [],
   onExportBackup,
   onImportBackupFile,
+  onScanQR,
   isBackupLoading = false,
 }) {
   const fileInputRef = useRef(null);
@@ -159,14 +161,14 @@ export default function SettingsSheet({
                 </Button>
               </div>
 
-              {/* Import Backup */}
+              {/* Import Backup or Shared Log */}
               <div className="p-3.5 rounded-xl bg-evenly-surface border border-brand-border/70 space-y-2.5">
                 <div>
                   <h4 className="text-xs font-bold text-brand-text">
-                    Import & Restore
+                    Import File
                   </h4>
                   <p className="text-[11px] text-brand-text-secondary mt-0.5">
-                    Restore or merge an existing .evenly backup.
+                    Restore a full backup or open a shared .evenly log.
                   </p>
                 </div>
 
@@ -177,9 +179,35 @@ export default function SettingsSheet({
                   className="w-full text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 text-brand-primary" />
-                  Select Backup File
+                  Select .evenly File
                 </Button>
               </div>
+
+              {/* Scan QR Code */}
+              {onScanQR && (
+                <div className="p-3.5 rounded-xl bg-evenly-surface border border-brand-border/70 space-y-2.5">
+                  <div>
+                    <h4 className="text-xs font-bold text-brand-text">
+                      Scan QR Code
+                    </h4>
+                    <p className="text-[11px] text-brand-text-secondary mt-0.5">
+                      Receive an expense log directly from another device.
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onClose();
+                      onScanQR();
+                    }}
+                    className="w-full text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <QrCode className="w-3.5 h-3.5 text-brand-primary" />
+                    Scan QR Code
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
