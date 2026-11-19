@@ -2,22 +2,39 @@
 @import "./css/evenly.css";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-accent: 'Reenie Beanie', cursive;
 
-  --color-evenly-bg: #FDFCF8;
-  --color-evenly-surface: #FFFFFF;
-  --color-evenly-sage: #E8EFE8;
-  --color-evenly-lavender: #EFEDF4;
-  --color-evenly-coral: #FFB7B2;
-  --color-evenly-coral-hover: #FFA59E;
-  --color-evenly-success: #4CAF50;
-  --color-evenly-warning: #F4B400;
-  --color-evenly-danger: #E53935;
-  --color-evenly-text: #292524;
-  --color-evenly-text-secondary: #78716C;
-  --color-evenly-border: #ECE7E1;
+  --color-evenly-bg: var(--evenly-bg);
+  --color-evenly-surface: var(--evenly-surface);
+  --color-evenly-sage: var(--evenly-sage);
+  --color-evenly-lavender: var(--evenly-lavender);
+  --color-evenly-coral: var(--evenly-coral);
+  --color-evenly-coral-hover: var(--evenly-coral-hover);
+  --color-evenly-coral-deep: var(--evenly-coral-deep);
+  --color-evenly-success: var(--evenly-success);
+  --color-evenly-warning: var(--evenly-warning);
+  --color-evenly-danger: var(--evenly-danger);
+  --color-evenly-text: var(--evenly-text);
+  --color-evenly-text-secondary: var(--evenly-text-secondary);
+  --color-evenly-border: var(--evenly-border);
+  --color-evenly-border-hover: var(--evenly-border-hover);
+
+  --color-brand-bg: var(--evenly-bg);
+  --color-brand-card: var(--evenly-surface);
+  --color-brand-surface: var(--evenly-surface);
+  --color-brand-text: var(--evenly-text);
+  --color-brand-text-secondary: var(--evenly-text-secondary);
+  --color-brand-border: var(--evenly-border);
+  --color-brand-border-hover: var(--evenly-border-hover);
+  --color-brand-primary: var(--evenly-coral-deep);
+  --color-brand-primary-hover: var(--evenly-coral);
+  --color-brand-success: var(--evenly-success);
+  --color-brand-warning: var(--evenly-warning);
+  --color-brand-danger: var(--evenly-danger);
 }
 
 @layer base {
@@ -30,5 +47,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 }

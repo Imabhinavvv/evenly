@@ -4,7 +4,7 @@ import { calculateSettlement, calculateTotalSpent } from './settlement.js';
  * Generates a clean, intelligent default session name based on expense dates or current date.
  * E.g., "July 2026 Log", "August 2026 Settlement", etc.
  */
-export function getDefaultSessionName(expenses = [], isSettling = false) {
+export function getDefaultSessionName(expenses = [], isSettling = false, groupName = null) {
   let targetDate = new Date();
 
   if (expenses && expenses.length > 0) {
@@ -24,16 +24,27 @@ export function getDefaultSessionName(expenses = [], isSettling = false) {
   const year = targetDate.getFullYear();
   const suffix = isSettling ? 'Settlement' : 'Log';
 
-  return `${month} ${year} ${suffix}`;
+  return groupName
+    ? `${groupName} — ${month} ${year} ${suffix}`
+    : `${month} ${year} ${suffix}`;
 }
 
 /**
  * Creates an immutable snapshot of an expense calculating session.
  * Stores Section 3 (settlement debts), Section 4 (expenses), Section 5 (total spent per person),
- * and metadata (id, name, savedAt, isSettled, roommates, grandTotal).
+ * and metadata (id, name, groupId, groupName, savedAt, isSettled, roommates, grandTotal).
  */
-export function createSessionSnapshot({ name, expenses, roommates, isSettled = false }) {
-  const cleanName = (name && name.trim()) ? name.trim() : getDefaultSessionName(expenses, isSettled);
+export function createSessionSnapshot({
+  name,
+  expenses,
+  roommates,
+  groupId = null,
+  groupName = null,
+  isSettled = false,
+}) {
+  const cleanName = (name && name.trim())
+    ? name.trim()
+    : getDefaultSessionName(expenses, isSettled, groupName);
   const now = new Date();
 
   const safeExpenses = Array.isArray(expenses) ? JSON.parse(JSON.stringify(expenses)) : [];
@@ -46,6 +57,8 @@ export function createSessionSnapshot({ name, expenses, roommates, isSettled = f
   return {
     id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
     name: cleanName,
+    groupId,
+    groupName,
     savedAt: now.toISOString(),
     isSettled: Boolean(isSettled),
     roommates: safeRoommates,

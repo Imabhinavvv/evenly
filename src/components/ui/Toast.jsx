@@ -15,7 +15,7 @@ export function Toast({ message, type = 'success', onClose }) {
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[300] modal-animate-in">
-      <div className="bg-white border border-brand-border shadow-lg rounded-xl p-4 pr-6 flex items-center gap-3 min-w-[250px]">
+      <div className="bg-evenly-surface border border-brand-border shadow-lg rounded-xl p-4 pr-6 flex items-center gap-3 min-w-[250px]">
         {type === 'success' ? (
           <CheckCircle2 className="w-5 h-5 text-brand-success" />
         ) : (

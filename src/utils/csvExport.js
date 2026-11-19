@@ -57,13 +57,17 @@ export async function generateCSV(expenses, transactions, sessionName = null) {
     });
 
     // Show native alert with save location before opening share sheet
-    window.alert(`✅ CSV saved!\n\nLocation: Documents/Evenly/${safeFilename}\n\nYou can also share or open it with the options below.`);
+    window.alert(`CSV saved.\n\nLocation: Documents/Evenly/${safeFilename}\n\nYou can also share or open it with the options below.`);
 
-    await Share.share({
-      title: safeFilename,
-      url: result.uri,
-      dialogTitle: 'Open / Share CSV',
-    });
+    try {
+      await Share.share({
+        title: safeFilename,
+        url: result.uri,
+        dialogTitle: 'Open / Share CSV',
+      });
+    } catch {
+      // File is already saved to Documents/Evenly
+    }
     return result.uri;
   }
 

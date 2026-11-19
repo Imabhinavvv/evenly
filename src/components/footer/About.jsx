@@ -19,11 +19,6 @@ export default function About() {
           everyone is on the same page.
         </p>
       </div>
-
-      <div className="bg-evenly-sage p-6 rounded-xl border border-brand-border mt-8">
-        <h4 className="font-bold mb-2">Version</h4>
-        <p className="text-brand-text-secondary text-sm">Evenly v1.0.0 (Local)</p>
-      </div>
     </div>
   );
 }

@@ -1,12 +1,53 @@
 import React, { useState, useEffect } from 'react';
+import { Camera, Loader2, X } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Checkbox } from './ui/Checkbox';
-import { formatCurrencyDecimal } from '../utils/currency';
+import { formatCurrencyDecimal, getActiveCurrency } from '../utils/currency';
+import { isReceiptScanSupported, scanReceipt } from '../utils/ocrService';
 
 export default function ExpenseForm({ roommates, onAddExpense, initialData, onCancel }) {
   const [description, setDescription] = useState(initialData ? initialData.description : '');
   const [total, setTotal] = useState(initialData ? (initialData.amount / 100).toString() : '');
+  const [activeCurrency, setActiveCurrencyState] = useState(getActiveCurrency);
+
+  // Receipt OCR State
+  const [isScanning, setIsScanning] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [detectedItems, setDetectedItems] = useState([]);
+  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
+  const [dontShowBetaAgain, setDontShowBetaAgain] = useState(false);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  useEffect(() => {
+    const onCurrencyChange = () => setActiveCurrencyState(getActiveCurrency());
+    window.addEventListener('currencychange', onCurrencyChange);
+    return () => window.removeEventListener('currencychange', onCurrencyChange);
+  }, []);
+
+  // Back button listener for dismissing detected receipt items and beta modal
+  useEffect(() => {
+    if (!isBetaModalOpen && detectedItems.length === 0) return;
+    const handleBack = (e) => {
+      e.preventDefault();
+      if (isBetaModalOpen) {
+        setIsBetaModalOpen(false);
+      } else if (detectedItems.length > 0) {
+        setDetectedItems([]);
+      }
+    };
+    window.addEventListener('hardwareBack', handleBack);
+    return () => window.removeEventListener('hardwareBack', handleBack);
+  }, [isBetaModalOpen, detectedItems]);
+
   const [paidBy, setPaidBy] = useState(() => {
     if (initialData && initialData.paidBy) {
       const init = {};
@@ -30,7 +71,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       });
       return next;
     });
-  }, [roommates]);
+  }, [roommates, initialData]);
 
   const parsedTotal = parseFloat(total) || 0;
   const isAmountExceeded = parsedTotal > 10000000;
@@ -90,6 +131,62 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
     }
   };
 
+  const handleClickScanButton = () => {
+    try {
+      const isDismissed = localStorage.getItem('es_dismiss_ocr_beta') === 'true';
+      if (isDismissed) {
+        startScanProcess();
+      } else {
+        setIsBetaModalOpen(true);
+      }
+    } catch {
+      setIsBetaModalOpen(true);
+    }
+  };
+
+  const handleConfirmBetaScan = () => {
+    if (dontShowBetaAgain) {
+      try {
+        localStorage.setItem('es_dismiss_ocr_beta', 'true');
+      } catch {
+        // ignore
+      }
+    }
+    setIsBetaModalOpen(false);
+    startScanProcess();
+  };
+
+  const startScanProcess = async () => {
+    setScanError(null);
+    setIsScanning(true);
+    try {
+      const result = await scanReceipt();
+      if (result.cancelled) {
+        return;
+      }
+      if (!result.success) {
+        setScanError(result.error || 'Could not parse receipt text.');
+        return;
+      }
+
+      const { merchant, totalAmount, candidateItems } = result.parsed;
+      if (merchant) {
+        setDescription(merchant);
+      }
+      if (totalAmount !== null && totalAmount > 0) {
+        setTotal(totalAmount.toString());
+      }
+      if (candidateItems && candidateItems.length > 0) {
+        setDetectedItems(candidateItems);
+      }
+      setToastMessage('Receipt recognized');
+    } catch (err) {
+      setScanError(err.message || 'Failed to scan receipt image.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!description.trim() || !isAmountValid || !isBalanced || splitBetween.length === 0) return;
@@ -117,6 +214,8 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
       setTotal('');
       setPaidBy(roommates.reduce((acc, r) => ({ ...acc, [r]: '' }), {}));
       setSplitBetween(roommates);
+      setDetectedItems([]);
+      setScanError(null);
     }
   };
 
@@ -124,17 +223,177 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
 
   if (roommates.length === 0) {
     return (
-      <div className="uiverse-card p-8 text-center text-brand-text-secondary border-dashed border-2 border-brand-border bg-brand-bg/50 shadow-none">
-        Add roommates above to start logging expenses.
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
+          <p className="text-xs text-brand-text-secondary mt-1">
+            Record a shared bill and split the cost amongst group members
+          </p>
+        </div>
+        <div className="p-8 text-center text-xs sm:text-sm text-brand-text-secondary border-dashed border border-brand-border rounded-2xl bg-brand-bg/40">
+          Create a group and add members above to start logging expenses.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={initialData ? "" : "uiverse-card p-6 sm:p-8"}>
-      {!initialData && <h2 className="text-xl font-bold text-brand-text mb-6">2. Add an Expense</h2>}
+    <div className={initialData ? "" : "space-y-6"}>
+      {/* Beta Feature Notice Modal */}
+      {isBetaModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-xs"
+            onClick={() => setIsBetaModalOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div className="bg-evenly-surface rounded-2xl shadow-xl max-w-sm w-full relative z-10 p-4 sm:p-5 border border-brand-border modal-animate-in space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-brand-text">
+                  Receipt Scanner
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  Beta
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBetaModalOpen(false)}
+                className="p-1 rounded-lg text-brand-text-secondary hover:text-brand-text hover:bg-brand-bg transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-brand-text-secondary leading-relaxed">
+              On-device receipt scanning is experimental. Recognition accuracy may vary depending on lighting and print quality—please verify the extracted details before saving.
+            </p>
+
+            <label className="flex items-center gap-2 text-xs text-brand-text-secondary cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={dontShowBetaAgain}
+                onChange={(e) => setDontShowBetaAgain(e.target.checked)}
+                className="rounded border-brand-border text-brand-primary focus:ring-brand-primary/20 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span>Don't show again</span>
+            </label>
+
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-brand-border/60">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="px-3 py-1.5 text-xs font-semibold"
+                onClick={() => setIsBetaModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="px-3.5 py-1.5 text-xs font-semibold bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text border border-evenly-coral-deep/30 flex items-center gap-1.5"
+                onClick={handleConfirmBetaScan}
+              >
+                <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
+                <span>Continue</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!initialData ? (
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-brand-text mb-0">2. Add an Expense</h2>
+            <p className="text-xs text-brand-text-secondary mt-1">
+              Record a shared bill and split the cost amongst group members
+            </p>
+          </div>
+
+          {isReceiptScanSupported() && (
+            <button
+              type="button"
+              onClick={handleClickScanButton}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-evenly-coral-deep/30 bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text shadow-2xs transition-all cursor-pointer disabled:opacity-60 flex-shrink-0"
+              title="Scan Receipt with Camera or Photo Library"
+            >
+              {isScanning ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-evenly-coral-deep" />
+              ) : (
+                <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
+              )}
+              <span>{isScanning ? 'Scanning...' : 'Scan Receipt'}</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        isReceiptScanSupported() && (
+          <div className="flex justify-end pb-2">
+            <button
+              type="button"
+              onClick={handleClickScanButton}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-evenly-coral-deep/30 bg-evenly-coral hover:bg-evenly-coral-hover text-brand-text shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+            >
+              {isScanning ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-evenly-coral-deep" />
+              ) : (
+                <Camera className="w-3.5 h-3.5 text-evenly-coral-deep" />
+              )}
+              <span>{isScanning ? 'Scanning...' : 'Scan Receipt'}</span>
+            </button>
+          </div>
+        )
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        {scanError && (
+          <div className="p-2.5 rounded-xl bg-brand-danger/10 border border-brand-danger/20 text-xs text-brand-danger font-medium">
+            {scanError}
+          </div>
+        )}
+
+        {detectedItems.length > 0 && (
+          <div className="p-3 rounded-xl bg-evenly-surface border border-brand-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-brand-text">
+                Detected Items
+              </span>
+              <button
+                type="button"
+                onClick={() => setDetectedItems([])}
+                className="text-[11px] text-brand-text-secondary hover:text-brand-text cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3 h-3" /> Dismiss
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {detectedItems.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setDescription(item.title);
+                    setTotal(item.amount.toString());
+                  }}
+                  className="text-xs px-2.5 py-1 rounded-lg bg-brand-bg border border-brand-border hover:border-brand-primary/40 hover:text-brand-primary transition-colors cursor-pointer text-left"
+                >
+                  <span className="font-medium text-brand-text">{item.title}</span>
+                  <span className="ml-1.5 text-brand-primary font-bold">
+                    {formatCurrencyDecimal(item.amount, activeCurrency.code)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-brand-text-secondary">Description</label>
@@ -146,7 +405,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-brand-text-secondary">Total Amount (₹)</label>
+            <label className="text-sm font-medium text-brand-text-secondary">Total Amount ({activeCurrency.symbol})</label>
             <Input
               type="number"
               step="0.01"
@@ -159,7 +418,7 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
             />
             {isAmountExceeded && (
               <p className="text-brand-danger text-xs font-medium mt-1">
-                Expense amount cannot exceed ₹1,00,00,000 (1 Crore).
+                Expense amount cannot exceed {activeCurrency.symbol}10,000,000.
               </p>
             )}
           </div>
@@ -260,6 +519,16 @@ export default function ExpenseForm({ roommates, onAddExpense, initialData, onCa
           </Button>
         </div>
       </form>
+
+      {/* Sleek Minimalistic Toast (Disappears after 2s) */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] modal-animate-in pointer-events-none">
+          <div className="bg-evenly-surface text-brand-text px-4 py-2 rounded-full shadow-lg border border-brand-border flex items-center gap-2 text-xs font-semibold backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-brand-success shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

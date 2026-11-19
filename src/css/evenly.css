@@ -17,6 +17,7 @@
   --evenly-text: #292524;
   --evenly-text-secondary: #78716C;
   --evenly-border: #ECE7E1;
+  --evenly-border-hover: #D6D0C7;
 
   --evenly-radius-sm: 16px;
   --evenly-radius-md: 24px;
@@ -33,6 +34,54 @@
   --evenly-font-accent: 'Reenie Beanie', cursive;
 }
 
+/* Dark Mode Variables — Automatic from device or forced via .dark */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --evenly-bg: #141316;
+    --evenly-surface: #1E1D22;
+    --evenly-sage: #1C241E;
+    --evenly-lavender: #23202C;
+    --evenly-coral: #FFB7B2;
+    --evenly-coral-hover: #FFA59E;
+    --evenly-coral-deep: #FF8A80;
+    --evenly-success: #34D399;
+    --evenly-warning: #FBBF24;
+    --evenly-danger: #F87171;
+    --evenly-text: #F4F4F6;
+    --evenly-text-secondary: #9E9EA8;
+    --evenly-border: #2D2C34;
+    --evenly-border-hover: #403E4A;
+
+    --evenly-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.3);
+    --evenly-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55), 0 12px 32px rgba(0, 0, 0, 0.4);
+    --evenly-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.65), 0 20px 48px rgba(0, 0, 0, 0.5);
+    --evenly-shadow-coral: 0 4px 20px rgba(255, 183, 178, 0.2);
+  }
+}
+
+:root.dark,
+.dark {
+  --evenly-bg: #141316;
+  --evenly-surface: #1E1D22;
+  --evenly-sage: #1C241E;
+  --evenly-lavender: #23202C;
+  --evenly-coral: #FFB7B2;
+  --evenly-coral-hover: #FFA59E;
+  --evenly-coral-deep: #FF8A80;
+  --evenly-success: #34D399;
+  --evenly-warning: #FBBF24;
+  --evenly-danger: #F87171;
+  --evenly-text: #F4F4F6;
+  --evenly-text-secondary: #9E9EA8;
+  --evenly-border: #2D2C34;
+  --evenly-border-hover: #403E4A;
+
+  --evenly-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.3);
+  --evenly-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55), 0 12px 32px rgba(0, 0, 0, 0.4);
+  --evenly-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.65), 0 20px 48px rgba(0, 0, 0, 0.5);
+  --evenly-shadow-coral: 0 4px 20px rgba(255, 183, 178, 0.2);
+}
+
 /* Paper grain overlay */
 .paper-grain::before {
   content: '';
@@ -45,6 +94,18 @@
   background-repeat: repeat;
   background-size: 180px 180px;
   mix-blend-mode: multiply;
+}
+
+.dark .paper-grain::before {
+  opacity: 0.10;
+  mix-blend-mode: screen;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .paper-grain::before {
+    opacity: 0.10;
+    mix-blend-mode: screen;
+  }
 }
 
 /* Typography */
