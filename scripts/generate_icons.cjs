@@ -4,13 +4,13 @@ const sharp = require('sharp');
 
 const SOURCE_ICON = path.resolve('assets/icon.png');
 const ANDROID_RES = path.resolve('android/app/src/main/res');
+const ANDROID_MAIN = path.resolve('android/app/src/main');
 const PUBLIC_DIR = path.resolve('public');
 const PUBLIC_ICONS_DIR = path.resolve('public/icons');
 
-// Color Palette for Display Modes
-const LIGHT_BG = { r: 250, g: 249, b: 246, alpha: 1 }; // #FAF9F6 (Evenly warm surface)
-const LIGHT_BG_HEX = '#FAF9F6';
-const DARK_BG_HEX = '#141316'; // Evenly dark surface
+// Consistent Solid White Background (#FFFFFF) for everything (no theme switching)
+const APP_BG = { r: 255, g: 255, b: 255, alpha: 1 };
+const APP_BG_HEX = '#FFFFFF';
 
 // Densities configuration for Android
 const ANDROID_DENSITIES = [
@@ -71,7 +71,6 @@ async function extractLogoWithTransparency(sourcePath) {
   function checkAndEnqueue(p) {
     const idx = p * 4;
     const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-    // Threshold for off-white background
     if (r >= 244 && g >= 244 && b >= 244) {
       if (!isOuterBg[p]) {
         isOuterBg[p] = 1;
@@ -127,7 +126,6 @@ async function extractLogoWithTransparency(sourcePath) {
       if (touchesBg) {
         const r = data[idx], g = data[idx + 1], b = data[idx + 2];
         const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        // Anti-alias alpha smoothly based on edge luminance
         outData[idx + 3] = Math.min(255, Math.max(0, Math.round((1 - lum) * 255 * 1.5)));
       }
     }
@@ -152,7 +150,7 @@ async function main() {
   const trimmedMeta = await sharp(trimmedLogoBuffer).metadata();
   console.log(`Trimmed logo artwork: ${trimmedMeta.width}x${trimmedMeta.height}`);
 
-  // 2. Prepare monochrome version (pure white #FFFFFF preserving alpha) for Material You
+  // 2. Prepare monochrome version (pure white #FFFFFF silhouette with alpha) for Material You
   const { data: alphaData, info: alphaInfo } = await sharp(trimmedLogoBuffer)
     .extractChannel(3)
     .toBuffer({ resolveWithObject: true });
@@ -171,11 +169,10 @@ async function main() {
   const monochromeTrimmed = await sharp(whiteBase).joinChannel(alphaData).png().toBuffer();
   console.log('Monochrome logo mark created for Material Theme.');
 
-  // Helper to place graphic into adaptive canvas with safe zone scaling
-  // Safe zone for circular/squircle mask is central 62% of 108dp canvas
-  async function renderAdaptiveLayer(graphicBuffer, canvasSize, withContrastHalo = false) {
-    const maxDim = Math.round(canvasSize * 0.62);
-    let resized = await sharp(graphicBuffer)
+  // Helper to place graphic into adaptive canvas with safe zone scaling (61% safe circle)
+  async function renderAdaptiveLayer(graphicBuffer, canvasSize) {
+    const maxDim = Math.round(canvasSize * 0.61);
+    const resized = await sharp(graphicBuffer)
       .resize({
         width: maxDim,
         height: maxDim,
@@ -183,34 +180,6 @@ async function main() {
       })
       .png()
       .toBuffer();
-
-    // In dark display mode, a subtle soft white outline provides crisp separation for dark navy parts
-    if (withContrastHalo) {
-      const haloAlpha = await sharp(resized).extractChannel(3).toBuffer();
-      const haloWhite = await sharp({
-        create: {
-          width: (await sharp(resized).metadata()).width,
-          height: (await sharp(resized).metadata()).height,
-          channels: 3,
-          background: { r: 255, g: 255, b: 255 },
-        },
-      })
-        .png()
-        .toBuffer();
-
-      const whiteMask = await sharp(haloWhite).joinChannel(haloAlpha).png().toBuffer();
-      // Dilate / blur slightly to form subtle halo
-      const blurredHalo = await sharp(whiteMask)
-        .blur(1.2)
-        .linear(1, 0)
-        .png()
-        .toBuffer();
-
-      resized = await sharp(blurredHalo)
-        .composite([{ input: resized, blend: 'over' }])
-        .png()
-        .toBuffer();
-    }
 
     const resizedMeta = await sharp(resized).metadata();
     const left = Math.round((canvasSize - resizedMeta.width) / 2);
@@ -255,14 +224,13 @@ async function main() {
         width: canvasSize,
         height: canvasSize,
         channels: 4,
-        background: LIGHT_BG,
+        background: APP_BG,
       },
     })
       .composite([{ input: resized, left, top }])
       .png()
       .toBuffer();
 
-    // Clip with rounded / circular mask for smooth antialiasing
     return await sharp(bgWithLogo)
       .composite([{ input: Buffer.from(maskSvg), blend: 'dest-in' }])
       .png()
@@ -276,40 +244,48 @@ async function main() {
         width: canvasSize,
         height: canvasSize,
         channels: 4,
-        background: LIGHT_BG,
+        background: APP_BG,
       },
     })
       .png()
       .toBuffer();
   }
 
-  // 3. Generate Android Mipmap densities
-  console.log('Generating Android Mipmap densities...');
+  // 3. Generate Android Mipmap densities (PNG only to avoid AAPT duplicate resource errors)
+  console.log('Generating Android Mipmap densities (PNG)...');
   for (const density of ANDROID_DENSITIES) {
     const dir = path.join(ANDROID_RES, density.folder);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // A. Adaptive Foreground (with subtle halo for dark mode display contrast)
-    const fg = await renderAdaptiveLayer(trimmedLogoBuffer, density.adaptiveSize, true);
-    fs.writeFileSync(path.join(dir, 'ic_launcher_foreground.png'), fg);
+    // Clean up any stale webp files that cause AAPT duplicate resource errors
+    const existingFiles = fs.readdirSync(dir);
+    for (const f of existingFiles) {
+      if (f.endsWith('.webp')) {
+        fs.unlinkSync(path.join(dir, f));
+      }
+    }
 
-    // B. Adaptive Monochrome (Material You Themed Icons - pure white mask)
-    const mono = await renderAdaptiveLayer(monochromeTrimmed, density.adaptiveSize, false);
-    fs.writeFileSync(path.join(dir, 'ic_launcher_monochrome.png'), mono);
+    // A. Adaptive Foreground
+    const fgPng = await renderAdaptiveLayer(trimmedLogoBuffer, density.adaptiveSize);
+    fs.writeFileSync(path.join(dir, 'ic_launcher_foreground.png'), fgPng);
 
-    // C. Adaptive Background (Raster fallback)
-    const bg = await renderAdaptiveBg(density.adaptiveSize);
-    fs.writeFileSync(path.join(dir, 'ic_launcher_background.png'), bg);
+    // B. Adaptive Monochrome (Material You Themed Icons)
+    const monoPng = await renderAdaptiveLayer(monochromeTrimmed, density.adaptiveSize);
+    fs.writeFileSync(path.join(dir, 'ic_launcher_monochrome.png'), monoPng);
+
+    // C. Adaptive Background (Solid White #FFFFFF)
+    const bgPng = await renderAdaptiveBg(density.adaptiveSize);
+    fs.writeFileSync(path.join(dir, 'ic_launcher_background.png'), bgPng);
 
     // D. Legacy square/squircle
-    const legacy = await renderLegacyIcon(density.legacySize, false);
-    fs.writeFileSync(path.join(dir, 'ic_launcher.png'), legacy);
+    const legacyPng = await renderLegacyIcon(density.legacySize, false);
+    fs.writeFileSync(path.join(dir, 'ic_launcher.png'), legacyPng);
 
     // E. Legacy round
-    const legacyRound = await renderLegacyIcon(density.legacySize, true);
-    fs.writeFileSync(path.join(dir, 'ic_launcher_round.png'), legacyRound);
+    const legacyRoundPng = await renderLegacyIcon(density.legacySize, true);
+    fs.writeFileSync(path.join(dir, 'ic_launcher_round.png'), legacyRoundPng);
 
     console.log(`  ✓ Generated ${density.folder} (adaptive: ${density.adaptiveSize}px, legacy: ${density.legacySize}px)`);
   }
@@ -322,9 +298,9 @@ async function main() {
 
   const adaptiveXmlContent = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
-    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
 </adaptive-icon>
 `;
 
@@ -332,33 +308,60 @@ async function main() {
   fs.writeFileSync(path.join(anydpiDir, 'ic_launcher_round.xml'), adaptiveXmlContent, 'utf8');
   console.log('  ✓ Updated mipmap-anydpi-v26 XMLs with Material You <monochrome> layer.');
 
-  // 5. Setup Display Mode Color resources (Light and Dark Mode Launcher Backgrounds)
+  // 5. Update Background Color and Vector Drawables (Consistent White #FFFFFF for both modes)
   const valuesDir = path.join(ANDROID_RES, 'values');
   const valuesNightDir = path.join(ANDROID_RES, 'values-night');
-  if (!fs.existsSync(valuesNightDir)) {
-    fs.mkdirSync(valuesNightDir, { recursive: true });
+
+  const colorXml = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">${APP_BG_HEX}</color>
+</resources>
+`;
+  fs.writeFileSync(path.join(valuesDir, 'ic_launcher_background.xml'), colorXml, 'utf8');
+
+  // Remove values-night color override so Android never switches the background to dark in dark mode
+  if (fs.existsSync(valuesNightDir)) {
+    const nightBgFile = path.join(valuesNightDir, 'ic_launcher_background.xml');
+    if (fs.existsSync(nightBgFile)) {
+      fs.unlinkSync(nightBgFile);
+    }
+    // If values-night is empty, remove the folder
+    try {
+      const remaining = fs.readdirSync(valuesNightDir);
+      if (remaining.length === 0) {
+        fs.rmdirSync(valuesNightDir);
+      }
+    } catch {
+      // ignore
+    }
   }
 
-  const lightColorXml = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">${LIGHT_BG_HEX}</color>
-</resources>
+  // Update res/drawable/ic_launcher_background.xml to solid white vector (removes green grid)
+  const drawableDir = path.join(ANDROID_RES, 'drawable');
+  if (fs.existsSync(drawableDir)) {
+    const vectorBg = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="${APP_BG_HEX}"
+        android:pathData="M0,0h108v108h-108z"/>
+</vector>
 `;
-  const darkColorXml = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">${DARK_BG_HEX}</color>
-</resources>
-`;
+    fs.writeFileSync(path.join(drawableDir, 'ic_launcher_background.xml'), vectorBg, 'utf8');
+  }
+  console.log('  ✓ Configured consistent #FFFFFF background for all display modes.');
 
-  fs.writeFileSync(path.join(valuesDir, 'ic_launcher_background.xml'), lightColorXml, 'utf8');
-  fs.writeFileSync(path.join(valuesNightDir, 'ic_launcher_background.xml'), darkColorXml, 'utf8');
-  console.log('  ✓ Configured display modes: Light (#FAF9F6) and Dark (#141316) in values/ and values-night/.');
-
-  // 6. Play Store Icon (512x512)
+  // 6. Play Store & App Logo Icon (512x512)
   const playStoreIcon = await renderLegacyIcon(512, false);
-  fs.writeFileSync(path.join(ANDROID_RES, '../ic_launcher-web.png'), playStoreIcon);
+  fs.writeFileSync(path.join(ANDROID_MAIN, 'ic_launcher-web.png'), playStoreIcon);
+  fs.writeFileSync(path.join(ANDROID_MAIN, 'ic_launcher-playstore.png'), playStoreIcon);
   fs.writeFileSync(path.resolve('assets/play-store-icon.png'), playStoreIcon);
-  console.log('  ✓ Generated 512x512 Play Store icon (ic_launcher-web.png).');
+  fs.writeFileSync(path.resolve('assets/logo.png'), playStoreIcon);
+  fs.writeFileSync(path.resolve('public/logo.png'), playStoreIcon);
+  console.log('  ✓ Generated 512x512 Play Store and Logo icons (assets/logo.png, public/logo.png).');
 
   // 7. Web & PWA Icons (public/icons/)
   if (!fs.existsSync(PUBLIC_ICONS_DIR)) {
@@ -366,21 +369,19 @@ async function main() {
   }
 
   for (const size of WEB_SIZES) {
-    const webpBuf = await renderLegacyIcon(size, false);
-    // Convert to webp
-    const webpOut = await sharp(webpBuf).webp({ quality: 95 }).toBuffer();
+    const pngBuf = await renderLegacyIcon(size, false);
+    const webpOut = await sharp(pngBuf).webp({ quality: 95 }).toBuffer();
     fs.writeFileSync(path.join(PUBLIC_ICONS_DIR, `icon-${size}.webp`), webpOut);
 
-    // Also output png for key sizes
     if ([192, 512].includes(size)) {
-      fs.writeFileSync(path.join(PUBLIC_ICONS_DIR, `icon-${size}.png`), webpBuf);
+      fs.writeFileSync(path.join(PUBLIC_ICONS_DIR, `icon-${size}.png`), pngBuf);
     }
   }
 
   // Apple touch icon (180x180)
   const appleTouchIcon = await renderLegacyIcon(180, false);
   fs.writeFileSync(path.join(PUBLIC_DIR, 'apple-touch-icon.png'), appleTouchIcon);
-  console.log('  ✓ Generated Web/PWA icons in public/icons/ (48, 72, 96, 128, 192, 256, 512 webp & png).');
+  console.log('  ✓ Generated Web/PWA icons in public/icons/ (48 to 512px).');
 
   // 8. Favicon ICO (16x16, 32x32, 48x48)
   const icoSizes = [16, 32, 48];
@@ -393,8 +394,7 @@ async function main() {
   fs.writeFileSync(path.join(PUBLIC_DIR, 'favicon.ico'), icoBuffer);
   console.log('  ✓ Generated multi-resolution favicon.ico (16, 32, 48px).');
 
-  // 9. Adaptive SVG Favicon (public/favicon.svg)
-  // Embed the high-resolution logo as base64 with CSS media query for light and dark display modes
+  // 9. Consistent SVG Favicon (public/favicon.svg) - Solid #FFFFFF in all modes (no theme switching)
   const logo512Buf = await sharp(trimmedLogoBuffer)
     .resize({ width: 360, height: 360, fit: 'inside' })
     .png()
@@ -402,20 +402,12 @@ async function main() {
   const base64Logo = logo512Buf.toString('base64');
 
   const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <style>
-      .bg { fill: #FAF9F6; rx: 112px; }
-      @media (prefers-color-scheme: dark) {
-        .bg { fill: #141316; }
-      }
-    </style>
-  </defs>
-  <rect class="bg" width="512" height="512" rx="112" />
+  <rect fill="${APP_BG_HEX}" width="512" height="512" rx="112" />
   <image href="data:image/png;base64,${base64Logo}" x="76" y="76" width="360" height="360" />
 </svg>
 `;
   fs.writeFileSync(path.join(PUBLIC_DIR, 'favicon.svg'), svgFavicon, 'utf8');
-  console.log('  ✓ Generated adaptive SVG favicon with light/dark display mode media queries.');
+  console.log('  ✓ Generated consistent SVG favicon with #FFFFFF background.');
 
   console.log('\nAll app icons successfully generated!');
 }
