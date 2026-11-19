@@ -1,57 +1,86 @@
-# Evenly 💰
+# Evenly
 
-**Evenly** is a modern, intuitive expense tracking and bill splitting application that helps roommates, travel groups, friends, and teams manage shared finances with ease. Create separate groups (e.g. Trips, Flatmates, Weekend Outings, Office Projects), track expenses, split bills fairly, settle balances with minimal transactions, archive historical logs, and export detailed PDF & CSV reports—all through a warm, responsive editorial interface.
-
----
-
-## ✨ Features
-
-* 🏷️ **Multi-Group Management**: Create and switch between distinct groups (e.g. *Trip & Travel* ✈️, *Home & Roommates* 🏠, *Dining & Outings* 🍕, *Work & Projects* 💼, *Events & Parties* 🎉). Each group maintains its own dedicated member roster, active expenses, and saved history logs.
-* 📊 **Visual Analytics Dashboard**: Loads by default with visual representations of logs data: animated spending metrics, multi-segment category progress bars, member contribution shares, settlement flow cards, and past session timelines—with instant group-switching from the header.
-* 👥 **Group Member Management**: Add and remove participants per group in the dedicated Split tab.
-* ➕ **Multi-Payer Bill Splitting**: Custom payer amounts, equal distribution, or selective group splitting.
-* ⚡ **Optimized Debt Settlement**: Greedy debtor-creditor matching algorithm with exact cent arithmetic (zero-drift rounding).
-* 📊 **Individual & Grand Total Spent**: Real-time spending breakdown per person within each group.
-* 🗂️ **Session Snapshots & History**: Archive settled or active expense sessions per group, filter by group or view all history, search by member/name/date, and restore into the editor.
-* 📦 **Custom `.evenly` Backups**: Full export and import of all groups, history, and workspace data into compressed `.evenly` archives. Supports Android OS file-association intents, WhatsApp/email sharing, and manual in-app file restoration with Merge or Replace options.
-* 📄 **PDF & CSV Export**: Download beautifully formatted PDF tables or CSV summaries branded with the active group name.
-* 📲 **Multi-App Share Log**: One-click sharing dropdown to WhatsApp, Gmail/Email, Telegram, SMS, or System Share. Prepares a formatted "Who Owes What" quick summary and generates the PDF report with executive settlement debt highlights.
-* 📱 **Native Android Integration**: Built with Capacitor; saves reports directly to device Documents and integrates with native Android share sheets.
-* 🌓 **Automatic Light & Dark Mode**: Seamlessly adapts to your device's display mode (`prefers-color-scheme: dark`) with warm obsidian/charcoal surfaces, crisp typography, and dynamic Android status bar theming. Includes a quick one-tap toggle (Auto / Dark / Light) in the header.
-* 🔒 **Offline-First & Auto-Migration**: Fully operational offline with automatic `localStorage` persistence. Automatically migrates legacy roommate storage into a default group without data loss.
-* 🎨 **Editorial Design**: Warm digital-notebook aesthetic with subtle paper grain texture and responsive layouts.
+**Evenly** is a fast, 100% offline-first expense tracker and bill splitting application designed for roommates, travel groups, friends, and teams. Built with React 19, Vite, Tailwind CSS, and Capacitor 8, Evenly combines a warm editorial aesthetic with powerful local computation: multi-group management, exact-cent debt minimization, on-device OCR receipt scanning, air-gapped QR code peer transfer, and full workspace backup archiving—with zero cloud dependencies and complete privacy.
 
 ---
 
-## 🛠️ Tech Stack
+## Features
+
+### Multi-Group Workspace Architecture
+* **Isolated Group Contexts**: Create dedicated groups categorized by type (Trips & Travel, Home & Flatmates, Dining & Outings, Projects & Work, Events).
+* **Dedicated Data Isolation**: Each group maintains its own member roster, active expenses, and saved session history.
+* **Unified Layout**: Clean single-container layout with hairline section dividers for member rosters, expense entry, debt calculation, expense log, and total spent tally.
+
+### Offline-First On-Device OCR Receipt Scanner
+* **100% On-Device Processing**: Powered by `@capacitor-mlkit/text-recognition` (Google ML Kit on Android, Apple Vision on iOS). No images or text ever leave your device.
+* **Bundled Model Assets**: ML Kit vision dependencies are declared in the native Android manifest to bundle models at install time, avoiding runtime download failures when offline.
+* **Spatial Block & Multi-Column Parser**: Custom line-pairing heuristics match right-aligned price values with itemized descriptions and filter out thermal receipt noise and tax sub-lines.
+* **Native Mobile Gated**: The receipt scanner automatically activates only on native Android and iOS builds, preserving clean desktop and browser compatibility.
+
+### Offline Peer-to-Peer Log Sharing & Air-Gapped QR Transfer
+* **Single-Log `.evenly` Archive Export**: Export individual session logs as lightweight `.evenly` files via native share sheets (Quick Share, AirDrop, Bluetooth, Drive, or Files) without exposing your entire multi-group database.
+* **Air-Gapped QR Code Transfer**: High-density indexed tuple serialization encodes logs with up to 15–20 expenses into ~200 characters for instant peer-to-peer scanning without network connectivity.
+* **In-App Camera QR Scanner**: Built-in camera viewfinder with responsive reticle guide corners, throttled scan loop (~10 fps to save CPU/battery), haptic feedback, and a fallback to upload QR screenshots from photos.
+* **Import Log Modal**: Recipients can choose whether to open the shared log as a safe isolated group, load it directly into the active editor, or save it straight to history.
+
+### Smart Debt Settlement Engine
+* **Greedy Settlement Algorithm**: Calculates the minimum number of transactions required to balance all accounts.
+* **Exact-Cent Arithmetic**: Eliminates floating-point rounding errors and balance drift.
+* **Multi-Payer Support**: Split individual expenses equally, specify custom payer amounts, or select individual members.
+
+### Multi-Currency Engine
+* Supports 10 global currencies: **INR (₹)**, **USD ($)**, **EUR (€)**, **GBP (£)**, **JPY (¥)**, **CAD (C$)**, **AUD (A$)**, **AED**, **SGD (S$)**, and **CHF**.
+* Live currency selection in Settings that reactively updates balance sheets, settlement transfers, expense logs, and report exports.
+
+### Native Mobile & Gesture Navigation
+* **Hardware Back Button Handling**: State-aware priority cascade for Android back button and swipe navigation:
+  1. Dismisses confirmation dialogs, QR scanner, or import modals.
+  2. Closes restore and session save dialogs.
+  3. Dismisses settings sheet and history pages.
+  4. Cancels active expense editing mode.
+  5. Navigates back to the Dashboard tab.
+  6. Gracefully exits to the Android home screen when at the root dashboard.
+
+### Privacy, Backups & Export
+* **No Third-Party Trackers**: Zero telemetry, analytics, or third-party cookies.
+* **Full Workspace Backups**: Export or restore all groups, expenses, and history into compressed `.evenly` zip archives.
+* **OS File Associations**: Registers `.evenly` file type intent filters in Android so tapping a backup file in any file manager or messaging app launches Evenly automatically.
+* **PDF & CSV Reports**: Export clean, branded reports and itemized spreadsheets directly to device storage.
+
+---
+
+## Tech Stack
 
 ### Web & Frontend
 * **Framework**: React 19
 * **Bundler**: Vite 8
 * **Styling**: Tailwind CSS v4 + Custom Design Tokens (`evenly.css`)
-* **Icons**: Lucide React
+* **Icons**: Lucide React & React Icons
 * **Linter**: Oxlint
 
-### Mobile Platform
+### Mobile Platform & Native Plugins
 * **Runtime**: Capacitor 8 (`@capacitor/android`, `@capacitor/core`)
-* **Native Plugins**: `@capacitor/app`, `@capacitor/filesystem`, `@capacitor/share`
+* **Plugins**:
+  * `@capacitor/app`: App lifecycle and hardware back button handling
+  * `@capacitor/camera`: Camera and photo gallery capture
+  * `@capacitor-mlkit/text-recognition`: On-device text recognition
+  * `@capacitor/filesystem`: Internal cache and document storage
+  * `@capacitor/share`: Native OS share sheet integration
 
-### Backup & Export Engines
-* **Backup**: JSZip custom `.evenly` archive generator and extractor
-* **PDF**: jsPDF + jspdf-autotable
-* **CSV**: Native CSV generator with Capacitor Share integration
-
-### Storage
-* **Persistence**: Client-side `localStorage` (Offline-first, zero cloud latency)
+### Offline Engines
+* **Backup & Compression**: JSZip
+* **QR Generation & Scanning**: `qrcode`, `jsqr`
+* **PDF Export**: jsPDF + jspdf-autotable
+* **Persistence**: Client-side `localStorage` (100% offline, zero server requirement)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) (v20+ recommended)
 * npm (v10+)
-* For Android builds: Android Studio & JDK 21
+* For Android builds: Android Studio & JDK 21 (API Level 36 / Android 16 target)
 
 ### Installation
 
@@ -86,35 +115,33 @@ npx cap sync android
 
 # Open Android project in Android Studio
 npx cap open android
+
+# Or build debug APK directly via Gradle
+cd android
+./gradlew assembleDebug
 ```
 
 ---
 
-## 🔒 Validation Rules
+## Roadmap
 
-* Required field validation on descriptions, amounts, and participants.
-* Payer sum must strictly balance with total expense amount.
-* Positive amounts only with an upper limit of **₹1,00,00,000 (1 Crore)**.
-* User-friendly inline validation errors and toast alerts.
-
----
-
-## 📌 Roadmap
-
-* Multi-currency support (USD, EUR, GBP, etc.)
-* Optional cloud synchronization and multi-device collaboration
-* Receipt scanning with OCR
-* Recurring bill reminders and notifications
-* Custom group category colors & avatars
+- [x] Multi-currency engine (10 global currencies)
+- [x] Offline on-device OCR receipt scanning
+- [x] Offline peer-to-peer log sharing (`.evenly` file export & air-gapped QR transfer)
+- [x] Android hardware back gesture navigation cascade
+- [x] Android API 36 / Play Store compliance (zero third-party tracking)
+- [ ] Recurring expense reminders and scheduled notifications
+- [ ] Custom group category colors and avatars
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 👨‍💻 Author
+## Team
 
-**Abhinav Mamidi**
+* **Abhinav Mamidi** — [abhinavmamidi.mails@gmail.com](mailto:abhinavmamidi.mails@gmail.com)
+* **Thanmay Sadguru Musa** — [thanmaysadguru.mails@gmail.com](mailto:thanmaysadguru.mails@gmail.com)
