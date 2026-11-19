@@ -79,9 +79,6 @@ export default function SettingsSheet({
               <h2 className="text-base font-bold text-brand-text">
                 Settings
               </h2>
-              <p className="text-xs text-brand-text-secondary">
-                Manage workspace backups and on-device storage.
-              </p>
             </div>
           </div>
 

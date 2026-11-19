@@ -38,10 +38,11 @@ export async function scanReceipt() {
     const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
     const { TextRecognition } = await import('@capacitor-mlkit/text-recognition');
 
-    // 1. Capture photo or select from gallery using native prompt
+    // 1. Capture photo or select from gallery using native prompt with high quality & cropping
     const photo = await Camera.getPhoto({
-      quality: 90,
-      allowEditing: false,
+      quality: 100,
+      allowEditing: true,
+      correctOrientation: true,
       resultType: CameraResultType.Uri,
       source: CameraSource.Prompt,
     });
