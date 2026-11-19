@@ -54,19 +54,106 @@ function createIco(pngBuffers) {
   return Buffer.concat([header, ...dirEntries, ...pngBuffers.map((p) => p.buffer)]);
 }
 
+/**
+ * Extracts the foreground logo artwork by flood-filling the outer connected background
+ * (so any white details inside the logo are preserved, while the outer background is made transparent).
+ */
+async function extractLogoWithTransparency(sourcePath) {
+  const { data, info } = await sharp(sourcePath)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const w = info.width;
+  const h = info.height;
+  const isOuterBg = new Uint8Array(w * h);
+  const queue = [];
+
+  function checkAndEnqueue(p) {
+    const idx = p * 4;
+    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+    // Threshold for off-white background
+    if (r >= 244 && g >= 244 && b >= 244) {
+      if (!isOuterBg[p]) {
+        isOuterBg[p] = 1;
+        queue.push(p);
+      }
+    }
+  }
+
+  // Enqueue 4 perimeter borders
+  for (let x = 0; x < w; x++) {
+    checkAndEnqueue(x);
+    checkAndEnqueue((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    checkAndEnqueue(y * w);
+    checkAndEnqueue(y * w + (w - 1));
+  }
+
+  let head = 0;
+  while (head < queue.length) {
+    const p = queue[head++];
+    const px = p % w;
+    const py = Math.floor(p / w);
+
+    if (px > 0) checkAndEnqueue(p - 1);
+    if (px < w - 1) checkAndEnqueue(p + 1);
+    if (py > 0) checkAndEnqueue(p - w);
+    if (py < h - 1) checkAndEnqueue(p + w);
+  }
+
+  const outData = Buffer.from(data);
+  for (let i = 0; i < w * h; i++) {
+    const idx = i * 4;
+    if (isOuterBg[i]) {
+      outData[idx + 3] = 0; // transparent
+    } else {
+      // Smooth edge antialiasing for boundary pixels touching outer background
+      const px = i % w;
+      const py = Math.floor(i / w);
+      let touchesBg = false;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = px + dx, ny = py + dy;
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+            if (isOuterBg[ny * w + nx]) {
+              touchesBg = true;
+              break;
+            }
+          }
+        }
+        if (touchesBg) break;
+      }
+      if (touchesBg) {
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        // Anti-alias alpha smoothly based on edge luminance
+        outData[idx + 3] = Math.min(255, Math.max(0, Math.round((1 - lum) * 255 * 1.5)));
+      }
+    }
+  }
+
+  const transparentImg = await sharp(outData, { raw: { width: w, height: h, channels: 4 } })
+    .trim()
+    .png()
+    .toBuffer();
+
+  return transparentImg;
+}
+
 async function main() {
   console.log('Reading source icon:', SOURCE_ICON);
   if (!fs.existsSync(SOURCE_ICON)) {
     throw new Error(`Source icon not found at ${SOURCE_ICON}`);
   }
 
-  // 1. Prepare raw trimmed logo mark
-  const trimmedBuffer = await sharp(SOURCE_ICON).trim().png().toBuffer();
-  const trimmedMeta = await sharp(trimmedBuffer).metadata();
-  console.log(`Trimmed logo dimensions: ${trimmedMeta.width}x${trimmedMeta.height}`);
+  // 1. Extract trimmed transparent logo mark
+  const trimmedLogoBuffer = await extractLogoWithTransparency(SOURCE_ICON);
+  const trimmedMeta = await sharp(trimmedLogoBuffer).metadata();
+  console.log(`Trimmed logo artwork: ${trimmedMeta.width}x${trimmedMeta.height}`);
 
   // 2. Prepare monochrome version (pure white #FFFFFF preserving alpha) for Material You
-  const { data: alphaData, info: alphaInfo } = await sharp(trimmedBuffer)
+  const { data: alphaData, info: alphaInfo } = await sharp(trimmedLogoBuffer)
     .extractChannel(3)
     .toBuffer({ resolveWithObject: true });
 
@@ -85,10 +172,10 @@ async function main() {
   console.log('Monochrome logo mark created for Material Theme.');
 
   // Helper to place graphic into adaptive canvas with safe zone scaling
-  async function renderAdaptiveLayer(graphicBuffer, canvasSize) {
-    // Target safe area is 62% of canvas
+  // Safe zone for circular/squircle mask is central 62% of 108dp canvas
+  async function renderAdaptiveLayer(graphicBuffer, canvasSize, withContrastHalo = false) {
     const maxDim = Math.round(canvasSize * 0.62);
-    const resized = await sharp(graphicBuffer)
+    let resized = await sharp(graphicBuffer)
       .resize({
         width: maxDim,
         height: maxDim,
@@ -96,6 +183,34 @@ async function main() {
       })
       .png()
       .toBuffer();
+
+    // In dark display mode, a subtle soft white outline provides crisp separation for dark navy parts
+    if (withContrastHalo) {
+      const haloAlpha = await sharp(resized).extractChannel(3).toBuffer();
+      const haloWhite = await sharp({
+        create: {
+          width: (await sharp(resized).metadata()).width,
+          height: (await sharp(resized).metadata()).height,
+          channels: 3,
+          background: { r: 255, g: 255, b: 255 },
+        },
+      })
+        .png()
+        .toBuffer();
+
+      const whiteMask = await sharp(haloWhite).joinChannel(haloAlpha).png().toBuffer();
+      // Dilate / blur slightly to form subtle halo
+      const blurredHalo = await sharp(whiteMask)
+        .blur(1.2)
+        .linear(1, 0)
+        .png()
+        .toBuffer();
+
+      resized = await sharp(blurredHalo)
+        .composite([{ input: resized, blend: 'over' }])
+        .png()
+        .toBuffer();
+    }
 
     const resizedMeta = await sharp(resized).metadata();
     const left = Math.round((canvasSize - resizedMeta.width) / 2);
@@ -117,7 +232,7 @@ async function main() {
   // Helper to render legacy squircle icon
   async function renderLegacyIcon(canvasSize, isRound = false) {
     const maxDim = Math.round(canvasSize * (isRound ? 0.64 : 0.68));
-    const resized = await sharp(trimmedBuffer)
+    const resized = await sharp(trimmedLogoBuffer)
       .resize({
         width: maxDim,
         height: maxDim,
@@ -176,12 +291,12 @@ async function main() {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // A. Adaptive Foreground
-    const fg = await renderAdaptiveLayer(trimmedBuffer, density.adaptiveSize);
+    // A. Adaptive Foreground (with subtle halo for dark mode display contrast)
+    const fg = await renderAdaptiveLayer(trimmedLogoBuffer, density.adaptiveSize, true);
     fs.writeFileSync(path.join(dir, 'ic_launcher_foreground.png'), fg);
 
-    // B. Adaptive Monochrome (Material You Themed Icons)
-    const mono = await renderAdaptiveLayer(monochromeTrimmed, density.adaptiveSize);
+    // B. Adaptive Monochrome (Material You Themed Icons - pure white mask)
+    const mono = await renderAdaptiveLayer(monochromeTrimmed, density.adaptiveSize, false);
     fs.writeFileSync(path.join(dir, 'ic_launcher_monochrome.png'), mono);
 
     // C. Adaptive Background (Raster fallback)
@@ -280,7 +395,7 @@ async function main() {
 
   // 9. Adaptive SVG Favicon (public/favicon.svg)
   // Embed the high-resolution logo as base64 with CSS media query for light and dark display modes
-  const logo512Buf = await sharp(trimmedBuffer)
+  const logo512Buf = await sharp(trimmedLogoBuffer)
     .resize({ width: 360, height: 360, fit: 'inside' })
     .png()
     .toBuffer();
