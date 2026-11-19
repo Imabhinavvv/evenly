@@ -300,6 +300,7 @@ export default function HistoryPage({
                                   transactions={session.transactions}
                                   totalSpent={session.totalSpent}
                                   sessionName={session.name}
+                                  isSettled={session.isSettled}
                                   onNotify={onNotify}
                                   iconOnly
                                 />

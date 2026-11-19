@@ -172,10 +172,22 @@ export default function QRShareModal({
 
           {/* Log Quick Meta */}
           <div className="w-full p-3 rounded-xl bg-brand-bg/50 border border-brand-border space-y-1 text-left">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-brand-text truncate">
-                {log.name || 'Expense Log'}
-              </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-bold text-brand-text truncate">
+                  {log.name || 'Expense Log'}
+                </span>
+                {log.isSettled ? (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    Settled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                    Pending
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-extrabold text-brand-text flex-shrink-0">
                 {formatCurrency(grandTotal)}
               </span>

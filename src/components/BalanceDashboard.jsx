@@ -44,9 +44,9 @@ export default function BalanceDashboard({
         </div>
       ) : (
         /* Single container with top bar and scrollable list with section breaks */
-        <div className="rounded-2xl border border-brand-border bg-evenly-surface overflow-hidden shadow-2xs">
+        <div className="rounded-2xl border border-brand-border bg-evenly-surface shadow-2xs">
           {/* Top Bar */}
-          <div className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-brand-border/70 bg-brand-surface-subtle">
+          <div className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-brand-border/70 bg-brand-surface-subtle rounded-t-2xl">
             {/* Left side: Settle Up / Save Session */}
             <div className="flex items-center gap-2">
               {transactions.length > 0 ? (
@@ -84,6 +84,7 @@ export default function BalanceDashboard({
                 transactions={transactions}
                 totalSpent={totalSpent}
                 sessionName={groupName}
+                isSettled={transactions.length === 0 && expenses.length > 0}
                 onNotify={onNotify}
                 iconOnly
               />

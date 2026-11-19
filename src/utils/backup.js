@@ -173,6 +173,7 @@ export async function parseAndValidateBackup(zipSource, options = {}) {
         roommates: Array.isArray(logData.roommates) ? logData.roommates : [],
         expenses: Array.isArray(logData.expenses) ? logData.expenses : [],
         grandTotal: typeof logData.grandTotal === 'number' ? logData.grandTotal : undefined,
+        isSettled: Boolean(logData.isSettled ?? manifest.meta?.isSettled),
         exportedAt: logData.exportedAt || manifest.timestamp,
       },
     };

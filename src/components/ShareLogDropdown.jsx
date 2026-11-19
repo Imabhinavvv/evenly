@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Share2,
   QrCode,
@@ -17,6 +18,7 @@ export default function ShareLogDropdown({
   transactions = [],
   totalSpent = [],
   sessionName = null,
+  isSettled = false,
   onNotify,
   buttonText = 'Share',
   size = 'sm',
@@ -27,15 +29,47 @@ export default function ShareLogDropdown({
   const [isSharingText, setIsSharingText] = useState(false);
   const [isSharingFile, setIsSharingFile] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, openUp: false });
 
+  const triggerRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Close dropdown on outside click
+  // Calculate viewport-safe menu position to prevent X/Y-axis clipping or overflow
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuWidth = 176; // w-44 in pixels
+    const menuHeight = 125; // compact unslopped menu height
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight + 12 && rect.top > menuHeight + 12;
+
+    const top = openUp ? Math.max(10, rect.top - menuHeight - 6) : rect.bottom + 6;
+
+    // Align right side with button's right edge, but clamp within viewport [10px, innerWidth - menuWidth - 10px]
+    let left = rect.right - menuWidth;
+    if (left < 10) {
+      left = 10;
+    }
+    if (left + menuWidth > window.innerWidth - 10) {
+      left = Math.max(10, window.innerWidth - menuWidth - 10);
+    }
+
+    setMenuPosition({ top, left, openUp });
+  }, []);
+
+  // Update position on open and listen for scroll / resize / outside click
   useEffect(() => {
     if (!isOpen) return;
+    updatePosition();
 
     const handleOutsideClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -46,16 +80,24 @@ export default function ShareLogDropdown({
       }
     };
 
+    const handleScrollOrResize = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('touchstart', handleOutsideClick);
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePosition]);
 
   const handleShareText = async () => {
     setIsOpen(false);
@@ -101,6 +143,7 @@ export default function ShareLogDropdown({
         name: sessionName || 'Expense Log',
         roommates,
         expenses,
+        isSettled: Boolean(isSettled),
       });
 
       if (onNotify) {
@@ -132,7 +175,7 @@ export default function ShareLogDropdown({
   const isBusy = isSharingText || isSharingFile;
 
   return (
-    <div className="relative inline-block" ref={menuRef}>
+    <div className="relative inline-block" ref={triggerRef}>
       {iconOnly ? (
         <button
           type="button"
@@ -166,19 +209,25 @@ export default function ShareLogDropdown({
         </Button>
       )}
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-52 rounded-xl bg-evenly-surface border border-brand-border shadow-xl py-1.5 z-50 text-left animate-in fade-in-50 zoom-in-95 duration-150">
+      {/* Unslopped Dropdown Menu via Portal to prevent any parent container overflow-hidden or x/y-axis clipping */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: 'fixed',
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+            width: '176px',
+          }}
+          className="rounded-xl bg-evenly-surface border border-brand-border shadow-2xl py-1 z-[9999] text-left animate-in fade-in-50 zoom-in-95 duration-150"
+        >
           <button
             type="button"
             onClick={handleOpenQR}
             className="w-full px-3 py-2 text-xs font-semibold text-brand-text hover:bg-brand-bg/80 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <QrCode className="w-4 h-4 text-brand-primary flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span>Show QR Code</span>
-              <span className="text-[10px] text-brand-text-secondary font-normal">Instant peer-to-peer scan</span>
-            </div>
+            <QrCode className="w-4 h-4 text-brand-primary shrink-0" />
+            <span>Show QR Code</span>
           </button>
 
           <button
@@ -186,11 +235,8 @@ export default function ShareLogDropdown({
             onClick={handleShareFile}
             className="w-full px-3 py-2 text-xs font-semibold text-brand-text hover:bg-brand-bg/80 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <FileCode className="w-4 h-4 text-evenly-coral-deep flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span>Share .evenly File</span>
-              <span className="text-[10px] text-brand-text-secondary font-normal">AirDrop, Bluetooth, Drive</span>
-            </div>
+            <FileCode className="w-4 h-4 text-evenly-coral-deep shrink-0" />
+            <span>Share .evenly File</span>
           </button>
 
           <div className="my-1 border-t border-brand-border/60" />
@@ -200,13 +246,11 @@ export default function ShareLogDropdown({
             onClick={handleShareText}
             className="w-full px-3 py-2 text-xs font-semibold text-brand-text hover:bg-brand-bg/80 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span>Share Summary</span>
-              <span className="text-[10px] text-brand-text-secondary font-normal">Text report via messaging</span>
-            </div>
+            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>Share Summary</span>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* QR Share Modal */}
@@ -217,6 +261,7 @@ export default function ShareLogDropdown({
           name: sessionName || 'Expense Log',
           roommates,
           expenses,
+          isSettled: Boolean(isSettled),
         }}
         onNotify={onNotify}
       />

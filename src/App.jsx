@@ -582,13 +582,32 @@ export default function App() {
 
   // Open single log as a new group
   const handleImportOpenAsNewGroup = (log) => {
+    const isSettled = Boolean(log.isSettled);
+    const newGroupId = `grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const groupName = (log.name || 'Shared Log').trim();
+    const safeRoommates = Array.isArray(log.roommates) ? log.roommates : [];
+    const safeExpenses = Array.isArray(log.expenses) ? log.expenses : [];
+
+    const initialHistory = isSettled
+      ? [
+          createSessionSnapshot({
+            name: groupName,
+            expenses: safeExpenses,
+            roommates: safeRoommates,
+            groupId: newGroupId,
+            groupName: groupName,
+            isSettled: true,
+          }),
+        ]
+      : [];
+
     const newGroup = {
-      id: `grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: (log.name || 'Shared Log').trim(),
+      id: newGroupId,
+      name: groupName,
       category: 'trip',
-      members: Array.isArray(log.roommates) ? log.roommates : [],
-      expenses: Array.isArray(log.expenses) ? log.expenses : [],
-      history: [],
+      members: safeRoommates,
+      expenses: safeExpenses,
+      history: initialHistory,
       createdAt: new Date().toISOString(),
     };
     setGroups((prev) => [...(Array.isArray(prev) ? prev : []), newGroup]);
@@ -634,13 +653,14 @@ export default function App() {
   // Save single log directly to history
   const handleImportSaveToHistory = (log) => {
     if (!activeGroup) return;
+    const isSettled = Boolean(log.isSettled);
     const newSession = createSessionSnapshot({
       name: log.name || 'Shared Log',
       expenses: Array.isArray(log.expenses) ? log.expenses : [],
       roommates: Array.isArray(log.roommates) ? log.roommates : [],
       groupId: activeGroup.id,
       groupName: activeGroup.name || 'Group',
-      isSettled: false,
+      isSettled,
     });
     setGroups((prev) =>
       prev.map((g) =>

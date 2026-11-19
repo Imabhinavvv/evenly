@@ -7,6 +7,8 @@ import {
   FolderInput,
   History,
   X,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { formatCurrency } from '../utils/currency';
@@ -71,9 +73,22 @@ export default function ImportLogModal({
                 <span className="text-[10px] uppercase font-bold tracking-wider text-brand-text-secondary block">
                   Log Title
                 </span>
-                <h3 className="text-sm sm:text-base font-bold text-brand-text truncate mt-0.5">
-                  {log.name || 'Shared Expense Log'}
-                </h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <h3 className="text-sm sm:text-base font-bold text-brand-text truncate">
+                    {log.name || 'Shared Expense Log'}
+                  </h3>
+                  {log.isSettled ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Settled
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                      <Clock className="w-3 h-3" />
+                      Pending
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-right flex-shrink-0">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-brand-text-secondary block">

@@ -12,6 +12,7 @@ import jsQR from 'jsqr';
 export function encodeLogToQR(log = {}) {
   const roommates = Array.isArray(log.roommates) ? log.roommates : [];
   const expenses = Array.isArray(log.expenses) ? log.expenses : [];
+  const isSettled = Boolean(log.isSettled);
 
   const compact = {
     t: 'el', // Evenly Log
@@ -26,6 +27,10 @@ export function encodeLogToQR(log = {}) {
       exp.date ? String(exp.date).slice(0, 10) : '',
     ]),
   };
+
+  if (isSettled) {
+    compact.s = 1;
+  }
 
   return JSON.stringify(compact);
 }
@@ -80,6 +85,7 @@ export function decodeLogFromQR(rawText) {
     roommates,
     expenses,
     grandTotal,
+    isSettled: Boolean(data.s),
   };
 }
 
@@ -160,6 +166,7 @@ export async function createSingleLogPackage(log) {
       roommatesCount: safeRoommates.length,
       expensesCount: safeExpenses.length,
       grandTotal,
+      isSettled: Boolean(log.isSettled),
     },
   };
   zip.file('manifest.json', JSON.stringify(manifest, null, 2));
@@ -171,6 +178,7 @@ export async function createSingleLogPackage(log) {
       roommates: safeRoommates,
       expenses: safeExpenses,
       grandTotal,
+      isSettled: Boolean(log.isSettled),
       exportedAt: new Date().toISOString(),
     },
   };

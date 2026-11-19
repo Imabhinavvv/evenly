@@ -369,13 +369,13 @@ export default function GroupManager({
                 <label className="block text-xs font-bold text-brand-text uppercase tracking-wider mb-1.5">
                   Initial Members (Optional)
                 </label>
-                <div className="flex gap-2 mb-2">
-                  <Input
+                <div className="relative flex items-center mb-2">
+                  <input
                     type="text"
                     value={tempMemberInput}
                     onChange={(e) => setTempMemberInput(e.target.value)}
                     placeholder="Add person name..."
-                    className="text-xs"
+                    className="w-full pr-11 py-2.5 pl-3.5 rounded-xl border border-brand-border bg-evenly-surface text-brand-text placeholder:text-brand-text-secondary/60 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -383,15 +383,16 @@ export default function GroupManager({
                       }
                     }}
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={handleAddInitialMember}
-                    disabled={!tempMemberInput.trim()}
+                    disabled={!tempMemberInput.trim() || newGroupInitialMembers.includes(tempMemberInput.trim())}
+                    className="absolute right-1.5 p-1.5 rounded-lg text-brand-primary hover:bg-evenly-sage transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Add member"
+                    aria-label="Add member"
                   >
-                    Add
-                  </Button>
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                  </button>
                 </div>
 
                 {newGroupInitialMembers.length > 0 && (
